@@ -8,6 +8,7 @@ class SocketClient {
   SocketClient._internal() {
     final ip = dotenv.env['IP_ADDRESS'] ?? 'localhost';
     final url = 'http://${ip}:3010';
+    //final url = '';
 
     socket = IO.io(url, <String, dynamic>{
       'transports': ['websocket'],

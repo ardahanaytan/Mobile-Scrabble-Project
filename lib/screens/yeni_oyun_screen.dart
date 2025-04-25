@@ -33,7 +33,7 @@ class _YeniOyunScreenState extends State<YeniOyunScreen> {
     kullaniciAdi = widget.kullaniciAdi;
     kazanilanOyun = widget.kazanilanOyun;
     toplamOyun = widget.toplamOyun;
-    _socketMethods.createRoomSuccessListener(context);
+    _socketMethods.matchFoundListener(context);
   }
 
   @override
@@ -76,28 +76,28 @@ class _YeniOyunScreenState extends State<YeniOyunScreen> {
                 children: [
                   CustomButton(
                     text: "Hızlı Oyun (2 dakika)",
-                    onTap: () => _socketMethods.createRoom(
+                    onTap: () => _socketMethods.findMatch(
                         kullaniciAdi, '2dk',
                       ),
                   ),
                   const SizedBox(height: 16),
                   CustomButton(
                     text: "Hızlı Oyun (5 dakika)",
-                    onTap: () => _socketMethods.createRoom(
+                    onTap: () => _socketMethods.findMatch(
                         kullaniciAdi, '5dk',
                       ),
                   ),
                   const SizedBox(height: 16),
                   CustomButton(
                     text: "Genişletilmiş Oyun (12 saat)",
-                    onTap: () => _socketMethods.createRoom(
+                    onTap: () => _socketMethods.findMatch(
                         kullaniciAdi, '12saat',
                       ),
                   ),
                   const SizedBox(height: 16),
                   CustomButton(
                     text: "Genişletilmiş Oyun (24 saat)",
-                    onTap: () => _socketMethods.createRoom(
+                    onTap: () => _socketMethods.findMatch(
                         kullaniciAdi, '24saat',
                       ),
                   ),

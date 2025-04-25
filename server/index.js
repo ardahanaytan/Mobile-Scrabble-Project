@@ -14,6 +14,7 @@ app.use(express.json());
 
 
 const DB = db_uri;
+//const DB = '';
 mongoose.connect(DB).then(() => {
     console.log("mongo tmm");
 }).catch((e) => {
@@ -34,47 +35,60 @@ const drawLettersFromBag = (letterBag, count) => {
     return drawn;
 };
 
-io.on('connection', (socket) => {
-    console.log('✅ Sunucu: Yeni bağlantı');
+let waitingPlayer = null;
 
-    socket.on('createRoom', async ({ nickname, selectedMode }) => {
-        try {
-          let room = new Room();
-          room.roomName = `oda-${socket.id}`;
-      
-          // Oyun süresi modu (saniye cinsinden)
-          const modeMap = {
-            '2dk': 120,
-            '5dk': 300,
-            '12saat': 43200,
-            '24saat': 86400
-          };
-      
-          room.turnTimeLimit = modeMap[selectedMode] || 300; // varsayılan 5dk
-      
-          const player = {
-            socketID: socket.id,
-            nickname,
-            rack: drawLettersFromBag(room.letterBag, 7),
-          };
-      
-          room.players.push(player);
-          room.turnIndex = 0;
-          room.gameStarted = false;
-      
-          await room.save();
-      
-          const roomId = room._id.toString();
-          socket.join(roomId);
-      
-          console.log(`✅ Oda oluşturuldu (${selectedMode}): ${roomId}`);
-          console.log(room);
-    
-          io.to(roomId).emit('createRoomSuccess', room);
-        } catch (err) {
-          console.error("❌ Oda oluşturulurken hata:", err);
+io.on('connection', (socket) => {
+    console.log('✅ Yeni bağlantı:', socket.id);
+  
+    socket.on('findMatch', async ({ nickname, selectedMode }) => {
+      try {
+        const player = {
+          socketID: socket.id,
+          nickname,
+          rack: [],
+        };
+  
+        if (!waitingPlayer) {
+          // Kimse yoksa beklemeye al
+          waitingPlayer = { socket, player, selectedMode };
+          return;
         }
-    });  
+  
+        // Bekleyen biri var, eşleştir
+        const room = new Room({
+            roomName: `oda-${waitingPlayer.socket.id}-${socket.id}`,
+        });
+  
+        player.rack = drawLettersFromBag(room.letterBag, 7);
+        waitingPlayer.player.rack = drawLettersFromBag(room.letterBag, 7);
+  
+        room.players.push(waitingPlayer.player);
+        room.players.push(player);
+  
+        room.turnIndex = 0;
+        room.turnTimeLimit = {
+          '2dk': 120,
+          '5dk': 300,
+          '12saat': 43200,
+          '24saat': 86400,
+        }[selectedMode];
+        room.gameStarted = true;
+  
+        await room.save();
+  
+        const roomId = room._id.toString();
+        socket.join(roomId);
+        waitingPlayer.socket.join(roomId);
+  
+        io.to(roomId).emit('matchFound', { room });
+  
+        waitingPlayer = null;
+      } catch (err) {
+        console.error('❌ Eşleşme hatası:', err);
+      }
+    });
+  
+    // Diğer eventler...
 });
 
 
