@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_application_1/resources/socket_methods.dart';
+import 'package:flutter_application_1/screens/lobi_screen.dart';
 import 'package:flutter_application_1/widgets/custom_button.dart';
 
 class YeniOyunScreen extends StatefulWidget {
@@ -76,30 +77,34 @@ class _YeniOyunScreenState extends State<YeniOyunScreen> {
                 children: [
                   CustomButton(
                     text: "Hızlı Oyun (2 dakika)",
-                    onTap: () => _socketMethods.findMatch(
-                        kullaniciAdi, '2dk',
-                      ),
+                    onTap: () {
+                      _socketMethods.findMatch(kullaniciAdi, "2dk");
+                      Navigator.pushNamed(context, LobbyScreen.routeName);
+                    },
                   ),
                   const SizedBox(height: 16),
                   CustomButton(
                     text: "Hızlı Oyun (5 dakika)",
-                    onTap: () => _socketMethods.findMatch(
-                        kullaniciAdi, '5dk',
-                      ),
+                    onTap: () {
+                      _socketMethods.findMatch(kullaniciAdi, "5dk");
+                      Navigator.pushNamed(context, LobbyScreen.routeName);
+                    },
                   ),
                   const SizedBox(height: 16),
                   CustomButton(
                     text: "Genişletilmiş Oyun (12 saat)",
-                    onTap: () => _socketMethods.findMatch(
-                        kullaniciAdi, '12saat',
-                      ),
+                    onTap: () {
+                      _socketMethods.findMatch(kullaniciAdi, "12saat");
+                      Navigator.pushNamed(context, LobbyScreen.routeName);
+                    },
                   ),
                   const SizedBox(height: 16),
                   CustomButton(
                     text: "Genişletilmiş Oyun (24 saat)",
-                    onTap: () => _socketMethods.findMatch(
-                        kullaniciAdi, '24saat',
-                      ),
+                    onTap: () {
+                      _socketMethods.findMatch(kullaniciAdi, "24saat");
+                      Navigator.pushNamed(context, LobbyScreen.routeName);
+                    },
                   ),
                 ],
               ),

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_application_1/provider/room_data_provide.dart';
+import 'package:flutter_application_1/screens/lobi_screen.dart';
 import 'package:flutter_application_1/screens/register_screen.dart';
 import 'package:flutter_application_1/screens/login_screen.dart';
 import 'package:flutter_application_1/utils/colors.dart';
@@ -40,6 +41,7 @@ class MyApp extends StatelessWidget {
           LoginScreen.routeName: (context) => const LoginScreen(),
           RegisterScreen.routeName: (context) => const RegisterScreen(),
           GameScreen.routeName: (context) => const GameScreen(),
+          LobbyScreen.routeName: (context) => const LobbyScreen(),
         },
         initialRoute: MainMenuScreen.routeName,
       ),
