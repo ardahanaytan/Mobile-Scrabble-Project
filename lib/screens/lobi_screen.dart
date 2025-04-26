@@ -19,16 +19,22 @@ class _LobbyScreenState extends State<LobbyScreen> {
   @override
   void initState() {
     super.initState();
+
     _socketClient.on('matchFound', (room) {
-      Provider.of<RoomDataProvider>(context, listen: false).updateRoomData(room);
-      Navigator.pushReplacementNamed(context, GameScreen.routeName);
+      print('💬 matchFound VERİSİ: $room');
+      Provider.of<RoomDataProvider>(context, listen: false).updateRoomData(room['room']);
+
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        Navigator.pushReplacementNamed(context, GameScreen.routeName);
+      });
     });
   }
+
 
   @override
   void dispose() {
     super.dispose();
-    _socketClient.off('matchFound'); // dinleyiciyi kaldırıyoruz yoksa memory leak olur
+    _socketClient.off('matchFound');
   }
 
   @override
@@ -43,7 +49,7 @@ class _LobbyScreenState extends State<LobbyScreen> {
               style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 20),
-            const CircularProgressIndicator(), // loading spinner
+            const CircularProgressIndicator(),
           ],
         ),
       ),

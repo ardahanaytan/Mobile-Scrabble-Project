@@ -22,4 +22,6 @@ class SocketMethods {
       Navigator.pushNamed(context, GameScreen.routeName);
     });
   }
+
+  
 }
