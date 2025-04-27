@@ -1,25 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_application_1/provider/room_data_provide.dart';
-//import 'package:flutter_application_1/resources/socket_client.dart';
+import 'package:flutter_application_1/resources/socket_client.dart';
 import 'package:provider/provider.dart';
-
-List<List<String>> tileTypes = [
-  ['K³', '', '', 'H²', '', '', '', 'K³', '', '', '', 'H²', '', '', 'K³'],
-  ['', 'K²', '', '', '', 'H³', '', '', '', 'H³', '', '', '', 'K²', ''],
-  ['', '', 'K²', '', '', '', 'H²', '', 'H²', '', '', '', 'K²', '', ''],
-  ['H²', '', '', 'K²', '', '', '', 'H²', '', '', '', 'K²', '', '', 'H²'],
-  ['', '', '', '', 'K²', '', '', '', '', '', 'K²', '', '', '', ''],
-  ['', 'H³', '', '', '', 'H³', '', '', '', 'H³', '', '', '', 'H³', ''],
-  ['', '', 'H²', '', '', '', 'H²', '', 'H²', '', '', '', 'H²', '', ''],
-  ['K³', '', '', 'H²', '', '', '', '⭐', '', '', '', 'H²', '', '', 'K³'],
-  ['', '', 'H²', '', '', '', 'H²', '', 'H²', '', '', '', 'H²', '', ''],
-  ['', 'H³', '', '', '', 'H³', '', '', '', 'H³', '', '', '', 'H³', ''],
-  ['', '', '', '', 'K²', '', '', '', '', '', 'K²', '', '', '', ''],
-  ['H²', '', '', 'K²', '', '', '', 'H²', '', '', '', 'K²', '', '', 'H²'],
-  ['', '', 'K²', '', '', '', 'H²', '', 'H²', '', '', '', 'K²', '', ''],
-  ['', 'K²', '', '', '', 'H³', '', '', '', 'H³', '', '', '', 'K²', ''],
-  ['K³', '', '', 'H²', '', '', '', 'K³', '', '', '', 'H²', '', '', 'K³'],
-];
 
 class GameScreen extends StatefulWidget {
   static String routeName = '/game-screen';
@@ -74,10 +56,11 @@ class _GameScreenState extends State<GameScreen> {
     final boardState = List<List<String>>.from(
       roomData['boardState'].map((row) => List<String>.from(row)),
     );
-    //final turnIndex = roomData['turnIndex'];
+
+    final mySocketId = SocketClient.instance.socket!.id;
 
     final myPlayer = players.firstWhere(
-      (player) => player['nickname'] == widget.kullaniciAdi,
+      (player) => player['socketID'] == mySocketId,
       orElse: () => null,
     );
 
@@ -87,6 +70,9 @@ class _GameScreenState extends State<GameScreen> {
       );
     }
 
+    final currentTurnSocketId = players[roomData['turnIndex']]['socketID'];
+    final isMyTurn = mySocketId == currentTurnSocketId;
+
     return Scaffold(
       appBar: AppBar(
         title: const Text('Scrabble Oyun Ekranı'),
@@ -94,7 +80,6 @@ class _GameScreenState extends State<GameScreen> {
       ),
       body: Column(
         children: [
-          // Oyuncular Bilgisi
           Padding(
             padding: const EdgeInsets.all(8.0),
             child: Row(
@@ -107,7 +92,7 @@ class _GameScreenState extends State<GameScreen> {
                       style: TextStyle(
                         fontWeight: FontWeight.bold,
                         fontSize: 18,
-                        decoration: player['nickname'] == widget.kullaniciAdi
+                        decoration: player['socketID'] == currentTurnSocketId
                             ? TextDecoration.underline
                             : TextDecoration.none,
                       ),
@@ -119,13 +104,11 @@ class _GameScreenState extends State<GameScreen> {
             ),
           ),
           const SizedBox(height: 10),
-          // Kalan Süre
           Text(
             'Kalan Süre: ${formatSeconds(remainingSeconds)}',
             style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
           ),
           const SizedBox(height: 10),
-          // 15x15 Oyun Tahtası
           Expanded(
             child: Padding(
               padding: const EdgeInsets.all(8.0),
@@ -140,49 +123,23 @@ class _GameScreenState extends State<GameScreen> {
                   int row = index ~/ 15;
                   int col = index % 15;
                   String letter = boardState[row][col];
-                  String type = tileTypes[row][col];
-
-                  Color backgroundColor;
-                  Widget child;
-
-                  switch (type) {
-                    case 'K²':
-                      backgroundColor = Colors.green;
-                      child = const Text('K²', style: TextStyle(fontWeight: FontWeight.bold));
-                      break;
-                    case 'K³':
-                      backgroundColor = Colors.brown;
-                      child = const Text('K³', style: TextStyle(fontWeight: FontWeight.bold));
-                      break;
-                    case 'H²':
-                      backgroundColor = Colors.blue;
-                      child = const Text('H²', style: TextStyle(fontWeight: FontWeight.bold));
-                      break;
-                    case 'H³':
-                      backgroundColor = Colors.purple;
-                      child = const Text('H³', style: TextStyle(fontWeight: FontWeight.bold));
-                      break;
-                    case '⭐':
-                      backgroundColor = Colors.yellow;
-                      child = const Icon(Icons.star, color: Colors.orange);
-                      break;
-                    default:
-                      backgroundColor = Colors.white;
-                      child = Text(letter, style: const TextStyle(fontWeight: FontWeight.bold));
-                  }
 
                   return Container(
                     decoration: BoxDecoration(
                       border: Border.all(color: Colors.black12),
-                      color: backgroundColor,
+                      color: letter.isEmpty ? Colors.white : Colors.orange.shade100,
                     ),
-                    child: Center(child: child),
+                    child: Center(
+                      child: Text(
+                        letter,
+                        style: const TextStyle(fontWeight: FontWeight.bold),
+                      ),
+                    ),
                   );
                 },
               ),
             ),
           ),
-          // Rack (eldeki harfler)
           Container(
             height: 80,
             padding: const EdgeInsets.all(8.0),
@@ -209,6 +166,15 @@ class _GameScreenState extends State<GameScreen> {
               ),
             ),
           ),
+          if (isMyTurn)
+            ElevatedButton(
+              onPressed: () {
+                final socket = SocketClient.instance.socket!;
+                socket.emit('confirmMove', {'currentRoomId': roomData['_id']});
+              },
+              child: const Text('Hamleyi Onayla'),
+            ),
+          const SizedBox(height: 10),
         ],
       ),
     );

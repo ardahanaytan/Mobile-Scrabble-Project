@@ -84,7 +84,7 @@ class _AktifOyunlarScreenState extends State<AktifOyunlarScreen> {
     double basariYuzdesi = widget.toplamOyun > 0
         ? (widget.kazanilanOyun / widget.toplamOyun) * 100
         : 0;
-
+    print(widget.kullaniciAdi);
     return Scaffold(
       appBar: AppBar(
         title: const Text("Aktif Oyunlar"),

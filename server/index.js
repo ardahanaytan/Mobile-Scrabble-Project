@@ -114,7 +114,7 @@ io.on('connection', (socket) => {
             room.players.push(newPlayer);
             await room.save();
           }
-      
+          
           socket.join(roomId);
           socket.emit('joinRoomSuccess', room);
       
@@ -125,6 +125,39 @@ io.on('connection', (socket) => {
           console.error('joinRoom hatası:', err);
         }
     });
+      
+    socket.on('confirmMove', async ({ currentRoomId }) => {
+        if (!currentRoomId) {
+          console.log('confirmMove: currentRoomId eksik.');
+          return;
+        }
+      
+        try {
+          const room = await Room.findById(currentRoomId);
+      
+          if (!room) {
+            console.log(`confirmMove: Oda (${currentRoomId}) bulunamadı.`);
+            return;
+          }
+      
+          if (room.isGameOver) {
+            console.log(`confirmMove: Oyun zaten bitmiş (${currentRoomId}).`);
+            return;
+          }
+      
+          room.turnIndex = (room.turnIndex + 1) % room.players.length;
+          room.lastMoveTime = new Date();
+      
+          await room.save();
+      
+          io.to(currentRoomId).emit('updateRoom', room);
+      
+          console.log(`confirmMove: ${currentRoomId} odasında hamle sırası değiştirildi.`);
+        } catch (err) {
+          console.error(`confirmMove hatası (${currentRoomId}):`, err);
+        }
+    });
+      
       
       
   
