@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_application_1/provider/room_data_provide.dart';
-import 'package:flutter_application_1/resources/socket_client.dart';
+//import 'package:flutter_application_1/resources/socket_client.dart';
 import 'package:provider/provider.dart';
 
 List<List<String>> tileTypes = [
@@ -21,11 +21,11 @@ List<List<String>> tileTypes = [
   ['K³', '', '', 'H²', '', '', '', 'K³', '', '', '', 'H²', '', '', 'K³'],
 ];
 
-
 class GameScreen extends StatefulWidget {
   static String routeName = '/game-screen';
+  final String kullaniciAdi;
 
-  const GameScreen({Key? key}) : super(key: key);
+  const GameScreen({Key? key, required this.kullaniciAdi}) : super(key: key);
 
   @override
   State<GameScreen> createState() => _GameScreenState();
@@ -74,10 +74,12 @@ class _GameScreenState extends State<GameScreen> {
     final boardState = List<List<String>>.from(
       roomData['boardState'].map((row) => List<String>.from(row)),
     );
-    final turnIndex = roomData['turnIndex'];
-    final mySocketId = SocketClient.instance.socket!.id;
+    //final turnIndex = roomData['turnIndex'];
 
-    final myPlayer = players.firstWhere((player) => player['socketID'] == mySocketId, orElse: () => null);
+    final myPlayer = players.firstWhere(
+      (player) => player['nickname'] == widget.kullaniciAdi,
+      orElse: () => null,
+    );
 
     if (myPlayer == null) {
       return const Scaffold(
@@ -97,23 +99,23 @@ class _GameScreenState extends State<GameScreen> {
             padding: const EdgeInsets.all(8.0),
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceAround,
-              children: List.generate(players.length, (index) {
+              children: players.map<Widget>((player) {
                 return Column(
                   children: [
                     Text(
-                      players[index]['nickname'],
+                      player['nickname'],
                       style: TextStyle(
                         fontWeight: FontWeight.bold,
                         fontSize: 18,
-                        decoration: turnIndex == index
+                        decoration: player['nickname'] == widget.kullaniciAdi
                             ? TextDecoration.underline
                             : TextDecoration.none,
                       ),
                     ),
-                    Text('Puan: ${players[index]['points']}'),
+                    Text('Puan: ${player['points']}'),
                   ],
                 );
-              }),
+              }).toList(),
             ),
           ),
           const SizedBox(height: 10),
@@ -123,7 +125,7 @@ class _GameScreenState extends State<GameScreen> {
             style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
           ),
           const SizedBox(height: 10),
-          // Tahta (15x15 Grid)
+          // 15x15 Oyun Tahtası
           Expanded(
             child: Padding(
               padding: const EdgeInsets.all(8.0),
@@ -172,9 +174,9 @@ class _GameScreenState extends State<GameScreen> {
                   return Container(
                     decoration: BoxDecoration(
                       border: Border.all(color: Colors.black12),
-                      color: backgroundColor, // Doğrudan backgroundColor kullan!
+                      color: backgroundColor,
                     ),
-                    child: Center(child: child), // Doğrudan child kullan!
+                    child: Center(child: child),
                   );
                 },
               ),
@@ -190,17 +192,17 @@ class _GameScreenState extends State<GameScreen> {
               children: List.generate(
                 myPlayer['rack'].length,
                 (index) => Container(
-                  width: 40, // ✅ Sabit genişlik
-                  height: 40, // ✅ Sabit yükseklik
+                  width: 40,
+                  height: 40,
                   margin: const EdgeInsets.symmetric(horizontal: 4),
                   decoration: BoxDecoration(
                     color: Colors.blue,
                     borderRadius: BorderRadius.circular(8),
                   ),
-                  child: Center( // ✅ Yazı ortalanacak
+                  child: Center(
                     child: Text(
                       myPlayer['rack'][index],
-                      style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                      style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.white),
                     ),
                   ),
                 ),

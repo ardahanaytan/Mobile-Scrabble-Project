@@ -87,6 +87,46 @@ io.on('connection', (socket) => {
         console.error('❌ Eşleşme hatası:', err);
       }
     });
+
+    socket.on('joinRoom', async ({ roomId, nickname }) => {
+        try {
+          const room = await Room.findById(roomId);
+      
+          if (!room) {
+            return socket.emit('errorJoin', { message: 'Oda bulunamadı.' });
+          }
+      
+          const alreadyPlayer = room.players.find(p => p.nickname === nickname);
+      
+          if (!alreadyPlayer && room.players.length >= 2) {
+            // Oda dolu ve kullanıcı zaten odada değilse
+            return socket.emit('errorJoin', { message: 'Oda dolu.' });
+          }
+      
+          if (!alreadyPlayer) {
+            // Eğer kullanıcı odada yoksa ekleyelim
+            const newPlayer = {
+              socketID: socket.id,
+              nickname: nickname,
+              points: 0,
+              rack: [],
+            };
+            room.players.push(newPlayer);
+            await room.save();
+          }
+      
+          socket.join(roomId);
+          socket.emit('joinRoomSuccess', room);
+      
+          // Odaya zaten bağlı olan diğer oyunculara da updateRoom gönderelim
+          socket.to(roomId).emit('updateRoom', room);
+      
+        } catch (err) {
+          console.error('joinRoom hatası:', err);
+        }
+    });
+      
+      
   
     // Diğer eventler...
 });
@@ -172,6 +212,29 @@ app.post('/api/login', async (req, res) => {
         kazanilanOyun: email_control[0].kazanilanOyun,
         toplamOyun: email_control[0].toplamOyun
     });
-  });
+});
   
 
+
+
+
+app.get('/api/active-rooms', async (req, res) => {
+    try {
+        const nickname = req.query.nickname;
+
+        if (!nickname) {
+            return res.status(400).json({ message: "nickname gerekli" });
+        }
+
+        const rooms = await Room.find({
+            isGameOver: false,
+            players: { $elemMatch: { nickname: nickname } }
+        });
+
+        res.status(200).json(rooms);
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ message: 'Aktif odalar çekilemedi.' });
+    }
+});
+  

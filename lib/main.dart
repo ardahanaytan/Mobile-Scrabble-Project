@@ -41,7 +41,11 @@ class MyApp extends StatelessWidget {
           LoginScreen.routeName: (context) => const LoginScreen(),
           RegisterScreen.routeName: (context) => const RegisterScreen(),
           LobbyScreen.routeName: (context) => const LobbyScreen(),
-          GameScreen.routeName: (context) => const GameScreen(),
+          GameScreen.routeName: (context) {
+            final roomData = Provider.of<RoomDataProvider>(context, listen: false).roomData;
+            final nickname = roomData['players'][0]['nickname']; // veya kullanıcı kimse ona göre çek
+            return GameScreen(kullaniciAdi: nickname);
+          },
         },
         initialRoute: MainMenuScreen.routeName,
       ),
