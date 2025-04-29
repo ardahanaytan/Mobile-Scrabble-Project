@@ -37,6 +37,15 @@ const drawLettersFromBag = (letterBag, count) => {
 
 let waitingPlayer = null;
 
+const validateScrabbleMove = (placements, boardState) => {
+    console.log("Dummy validation called for placements:", placements);
+    // TODO: Implement actual Scrabble word validation logic here
+    // - Check if words formed are valid (dictionary lookup)
+    // - Check if placement connects to existing tiles (after first move)
+    // - Check if all tiles are in a single line (row or column)
+    return 1; // Placeholder for successful validation
+};
+
 io.on('connection', (socket) => {
     console.log('✅ Yeni bağlantı:', socket.id);
   
@@ -87,9 +96,171 @@ io.on('connection', (socket) => {
         console.error('❌ Eşleşme hatası:', err);
       }
     });
+    
+    socket.on('placeTile', async ({ roomId, letter, row, col }) => {
+        try {
+          const room = await Room.findById(roomId);
+          if (!room || !room.gameStarted) {
+            // Oda bulunamadı veya oyun başlamadı
+            return;
+          }
   
-    // Diğer eventler...
-});
+          const playerIndex = room.players.findIndex(p => p.socketID === socket.id);
+          if (playerIndex === -1 || room.turnIndex !== playerIndex) {
+            // Oyuncu bulunamadı veya sıra onda değil
+            // Belki bir hata mesajı gönderilebilir: socket.emit('error', 'Sıra sizde değil!');
+            return;
+          }
+  
+          const player = room.players[playerIndex];
+          const tileIndex = player.rack.indexOf(letter);
+  
+          if (tileIndex === -1) {
+            // Oyuncunun elinde bu harf yok
+            // Belki bir hata mesajı gönderilebilir: socket.emit('error', 'Elinizde bu harf yok!');
+            return;
+          }
+  
+          if (room.boardState[row][col] !== '') {
+            // Kare dolu
+            // Belki bir hata mesajı gönderilebilir: socket.emit('error', 'Bu kare dolu!');
+            return;
+          }
+  
+          // --- State Update ---
+          // Harfi rack'ten çıkar
+          player.rack.splice(tileIndex, 1);
+          // Harfi tahtaya yerleştir
+          // Mongoose'un değişikliği algılaması için doğrudan atama yerine markModified gerekebilir
+          // veya daha basit bir yol: yeni bir boardState oluşturup atamak.
+          // Şimdilik doğrudan atama deneyelim:
+          room.boardState[row][col] = letter;
+          room.markModified('boardState'); // Mongoose'a boardState'in değiştiğini bildir
+  
+          // TODO: Puan hesaplama, kelime kontrolü, tur geçişi vb. eklenecek
+  
+          room.lastMoveTime = new Date(); // Son hamle zamanını güncelle
+  
+          await room.save();
+  
+          // Güncellenmiş oda bilgisini tüm oyunculara gönder
+          io.to(roomId).emit('updateRoom', { room });
+  
+        } catch (err) {
+          console.error(`❌ placeTile hatası (Oda: ${roomId}):`, err);
+          // İstemciye genel bir hata mesajı gönderilebilir
+          socket.emit('error', 'Harf yerleştirilirken bir hata oluştu.');
+        }
+      });
+  
+      socket.on('confirmMove', async ({ roomId, placements }) => {
+        try {
+          const room = await Room.findById(roomId);
+          if (!room || !room.gameStarted) return; // Oda yok veya oyun bitmiş
+  
+          const playerIndex = room.players.findIndex(p => p.socketID === socket.id);
+          if (playerIndex === -1 || room.turnIndex !== playerIndex) {
+            // Sıra oyuncuda değil veya oyuncu odada değil
+            return socket.emit('error', 'Hamle sırası sizde değil.');
+          }
+  
+          const player = room.players[playerIndex];
+          let currentBoardState = room.boardState.map(row => [...row]); // Deep copy for validation
+  
+          // --- Validation ---
+          let isValidMove = true;
+          const originalRack = [...player.rack]; // Copy rack before potential changes
+          const usedRackIndices = new Set(); // Track used rack letters for duplicates
+  
+          for (const placement of placements) {
+            const { letter, row, col } = placement;
+  
+            // 1. Check if square is empty on server's board
+            if (currentBoardState[row][col] !== '') {
+              isValidMove = false;
+              socket.emit('error', `(${row},${col}) karesi zaten dolu.`);
+              break;
+            }
+  
+            // 2. Check if player *had* the letter (approximate check)
+            // Note: This doesn't perfectly handle duplicate letters without more state.
+            // It assumes the client sent letters the player generally possesses.
+            // A more robust check would compare against the rack *before* temporary moves.
+            let foundInRack = false;
+            for(let i = 0; i < originalRack.length; i++) {
+                if(originalRack[i] === letter && !usedRackIndices.has(i)) {
+                    usedRackIndices.add(i);
+                    foundInRack = true;
+                    break;
+                }
+            }
+            if (!foundInRack) {
+               isValidMove = false;
+               socket.emit('error', `Elinizde '${letter}' harfi bulunmuyor veya zaten kullandınız.`);
+               break;
+            }
+  
+  
+            // Mark square as taken for subsequent checks in this loop
+            currentBoardState[row][col] = letter;
+          }
+  
+          // If initial placement checks failed, stop processing
+          if (!isValidMove) {
+            return;
+          }
+  
+          // --- Scrabble Specific Validation ---
+          const validationResult = validateScrabbleMove(placements, currentBoardState); // Call the dummy validation
+  
+          if (validationResult === 1) { // Proceed only if validation returns 1
+              console.log("Move validation successful (dummy). Proceeding with state update.");
+              // --- Update State ---
+              // 1. Apply placements to the actual board state
+              placements.forEach(p => {
+                room.boardState[p.row][p.col] = p.letter;
+              });
+              room.markModified('boardState'); // Mark boardState as modified for Mongoose
+  
+              // 2. Remove used letters from player's rack (based on tracked indices)
+              const newRack = originalRack.filter((_, index) => !usedRackIndices.has(index));
+              player.rack = newRack;
+  
+  
+              // 3. Draw new tiles
+              const tilesNeeded = 7 - player.rack.length;
+              const drawnTiles = drawLettersFromBag(room.letterBag, tilesNeeded);
+              player.rack.push(...drawnTiles);
+              room.markModified('letterBag'); // Mark letterBag as modified
+  
+              // TODO: Calculate score for the move
+  
+              // 4. Switch turn
+              room.turnIndex = (room.turnIndex + 1) % room.players.length;
+              room.lastMoveTime = new Date(); // Reset timer for the next player
+  
+              // --- Save and Broadcast ---
+              await room.save();
+              io.to(roomId).emit('updateRoom', { room }); // Send updated room to all players
+          } else {
+              // Validation failed (even the dummy one, though it won't currently)
+              console.log("Move validation failed.");
+              // Send an error message back to the client
+              socket.emit('error', 'Geçersiz hamle.');
+              // Note: We might need to revert temporary changes on the client if validation fails.
+              // Currently, the client state (_temporaryPlacements, _currentRack) isn't automatically reverted.
+              // This might require sending a specific 'validationFailed' event back.
+          }
+  
+        } catch (err) {
+          console.error(`❌ confirmMove hatası (Oda: ${roomId}):`, err);
+          socket.emit('error', 'Hamle onaylanırken bir hata oluştu.');
+        }
+      });
+  
+  
+      // Diğer eventler...
+  });
 
 
 

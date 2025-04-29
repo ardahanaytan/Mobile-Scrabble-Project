@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_application_1/provider/room_data_provide.dart'; // Import Provider
 import 'package:flutter_application_1/resources/socket_methods.dart';
+import 'package:flutter_application_1/screens/game_screen.dart'; // Import GameScreen for navigation
 import 'package:flutter_application_1/screens/lobi_screen.dart';
 import 'package:flutter_application_1/widgets/custom_button.dart';
+import 'package:provider/provider.dart'; // Import Provider package
 
 class YeniOyunScreen extends StatefulWidget {
   static String routeName = "/yeni-oyun";
@@ -34,7 +37,30 @@ class _YeniOyunScreenState extends State<YeniOyunScreen> {
     kullaniciAdi = widget.kullaniciAdi;
     kazanilanOyun = widget.kazanilanOyun;
     toplamOyun = widget.toplamOyun;
-    _socketMethods.matchFoundListener(context);
+    // Setup listener with callback
+    _socketMethods.matchFoundListener((roomData) {
+       // This callback will be triggered when a match is found by the server
+       if (mounted && roomData is Map<String, dynamic>) {
+         print("[YeniOyunScreen] Match found via callback. Navigating to GameScreen...");
+         // Update provider
+         Provider.of<RoomDataProvider>(context, listen: false).updateRoomData(roomData);
+         // Navigate to GameScreen, replacing LobbyScreen if user was sent there
+         Navigator.pushNamedAndRemoveUntil(
+           context,
+           GameScreen.routeName,
+           (route) => false, // Remove all previous routes
+         );
+       } else {
+          print("[YeniOyunScreen] Match found callback received, but widget not mounted or data invalid.");
+       }
+    });
+  }
+
+  @override
+  void dispose() {
+    // Remove socket listeners when screen is disposed
+    _socketMethods.removeListeners();
+    super.dispose();
   }
 
   @override

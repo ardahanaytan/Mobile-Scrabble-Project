@@ -63,4 +63,67 @@ const roomSchema = new mongoose.Schema({
   }],
 }, { timestamps: true });
 
+// --- Helper Methods ---
+
+// Helper function to shuffle an array (Fisher-Yates)
+function shuffleArray(array) {
+  for (let i = array.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [array[i], array[j]] = [array[j], array[i]]; // Swap elements
+  }
+}
+
+// Method to shuffle the letter bag
+roomSchema.methods._shuffleBag = function() {
+  shuffleArray(this.letterBag);
+};
+
+// Method to draw tiles from the bag
+// Takes the number of tiles needed as input
+roomSchema.methods.drawTiles = function(numTiles) {
+  // Ensure the bag is shuffled before drawing.
+  // A robust implementation might track shuffle status.
+  // For simplicity here, we shuffle before each draw batch,
+  // though shuffling only once at game start and then drawing is more typical.
+  // If called multiple times for one turn's refill, shuffling each time is incorrect.
+  // Consider a dedicated startGame method to shuffle once.
+  // this._shuffleBag(); // Let's assume the bag is shuffled at game start
+
+  const drawnTiles = [];
+  const tilesToDraw = Math.min(numTiles, this.letterBag.length); // Draw available tiles
+
+  // Efficiently remove and collect tiles using splice
+  if (tilesToDraw > 0) {
+      // Using splice directly on the bag modifies it and returns the removed items
+      const removed = this.letterBag.splice(0, tilesToDraw);
+      drawnTiles.push(...removed);
+  }
+
+  // 'this.letterBag' is now updated automatically by splice
+  return drawnTiles;
+};
+
+/*
+  Example Usage (potentially in a startGame method):
+
+  roomSchema.methods.startGame = async function() {
+    if (this.gameStarted || this.players.length < 2) return; // Need 2 players
+
+    this.gameStarted = true;
+    this.lastMoveTime = new Date();
+    this._shuffleBag(); // Shuffle ONCE at the start
+
+    this.players.forEach(player => {
+      // Assuming playerSchema has a 'tiles' array field
+      player.tiles = this.drawTiles(7); // Draw 7 tiles for each player
+    });
+
+    // Determine starting player (e.g., randomly)
+    this.turnIndex = Math.floor(Math.random() * this.players.length);
+
+    await this.save(); // Persist changes
+  };
+*/
+
+
 module.exports = mongoose.model('Room', roomSchema);
