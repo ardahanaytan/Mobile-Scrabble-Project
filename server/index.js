@@ -102,7 +102,7 @@ io.on('connection', (socket) => {
             // Oda dolu ve kullanıcı zaten odada değilse
             return socket.emit('errorJoin', { message: 'Oda dolu.' });
           }
-      
+          
           if (!alreadyPlayer) {
             // Eğer kullanıcı odada yoksa ekleyelim
             const newPlayer = {
@@ -114,7 +114,7 @@ io.on('connection', (socket) => {
             room.players.push(newPlayer);
             await room.save();
           }
-          
+          console.log('room id: ', roomId);
           socket.join(roomId);
           socket.emit('joinRoomSuccess', room);
       

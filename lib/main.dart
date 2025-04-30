@@ -7,18 +7,15 @@ import 'package:flutter_application_1/utils/colors.dart';
 import 'package:flutter_application_1/screens/main_menu_screen.dart';
 import 'package:flutter_application_1/screens/game_screen.dart';
 import 'package:provider/provider.dart';
-import 'package:flutter_dotenv/flutter_dotenv.dart'; // .env için
-//import 'package:flutter_application_1/resources/socket_client.dart'; // SocketClient'ı ekledik
+import 'package:flutter_dotenv/flutter_dotenv.dart'; 
 
 Future<void> main() async {
-  // .env dosyasını yükle
   try {
     await dotenv.load(fileName: '.env');
   } catch (e) {
     print("HATA: $e");
   }
 
-  // Uygulamayı başlat
   runApp(const MyApp());
 }
 
@@ -28,26 +25,30 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return ChangeNotifierProvider(
-      create:(context) => RoomDataProvider(),
+      create: (context) => RoomDataProvider(),
       child: MaterialApp(
         title: 'Flutter Demo',
         theme: ThemeData.dark().copyWith(
-          // ignore: deprecated_member_use
           useMaterial3: false,
           scaffoldBackgroundColor: bgColor,
         ),
+        initialRoute: MainMenuScreen.routeName,
         routes: {
           MainMenuScreen.routeName: (context) => const MainMenuScreen(),
           LoginScreen.routeName: (context) => const LoginScreen(),
           RegisterScreen.routeName: (context) => const RegisterScreen(),
           LobbyScreen.routeName: (context) => const LobbyScreen(),
-          GameScreen.routeName: (context) {
-            final roomData = Provider.of<RoomDataProvider>(context, listen: false).roomData;
-            final nickname = roomData['players'][0]['nickname']; // veya kullanıcı kimse ona göre çek
-            return GameScreen(kullaniciAdi: nickname);
-          },
         },
-        initialRoute: MainMenuScreen.routeName,
+        onGenerateRoute: (settings) {
+          if (settings.name == GameScreen.routeName) {
+            final args = settings.arguments as Map<String, dynamic>;
+            final nickname = args['kullaniciAdi']; // ARTIK arguments'dan çekiyoruz
+            return MaterialPageRoute(
+              builder: (context) => GameScreen(kullaniciAdi: nickname),
+            );
+          }
+          return null;
+        },
       ),
     );
   }

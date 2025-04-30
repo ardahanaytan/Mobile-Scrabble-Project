@@ -3,6 +3,24 @@ import 'package:flutter_application_1/provider/room_data_provide.dart';
 import 'package:flutter_application_1/resources/socket_client.dart';
 import 'package:provider/provider.dart';
 
+List<List<String>> tileTypes = [
+   ['K³', '', '', 'H²', '', '', '', 'K³', '', '', '', 'H²', '', '', 'K³'],
+   ['', 'K²', '', '', '', 'H³', '', '', '', 'H³', '', '', '', 'K²', ''],
+   ['', '', 'K²', '', '', '', 'H²', '', 'H²', '', '', '', 'K²', '', ''],
+   ['H²', '', '', 'K²', '', '', '', 'H²', '', '', '', 'K²', '', '', 'H²'],
+   ['', '', '', '', 'K²', '', '', '', '', '', 'K²', '', '', '', ''],
+   ['', 'H³', '', '', '', 'H³', '', '', '', 'H³', '', '', '', 'H³', ''],
+   ['', '', 'H²', '', '', '', 'H²', '', 'H²', '', '', '', 'H²', '', ''],
+   ['K³', '', '', 'H²', '', '', '', '⭐', '', '', '', 'H²', '', '', 'K³'],
+   ['', '', 'H²', '', '', '', 'H²', '', 'H²', '', '', '', 'H²', '', ''],
+   ['', 'H³', '', '', '', 'H³', '', '', '', 'H³', '', '', '', 'H³', ''],
+   ['', '', '', '', 'K²', '', '', '', '', '', 'K²', '', '', '', ''],
+   ['H²', '', '', 'K²', '', '', '', 'H²', '', '', '', 'K²', '', '', 'H²'],
+   ['', '', 'K²', '', '', '', 'H²', '', 'H²', '', '', '', 'K²', '', ''],
+   ['', 'K²', '', '', '', 'H³', '', '', '', 'H³', '', '', '', 'K²', ''],
+   ['K³', '', '', 'H²', '', '', '', 'K³', '', '', '', 'H²', '', '', 'K³'],
+ ];
+
 class GameScreen extends StatefulWidget {
   static String routeName = '/game-screen';
   final String kullaniciAdi;
@@ -15,12 +33,16 @@ class GameScreen extends StatefulWidget {
 
 class _GameScreenState extends State<GameScreen> {
   int remainingSeconds = 0;
-
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       calculateRemainingTime();
+    });
+
+    final socket = SocketClient.instance.socket!;
+    socket.on('updateRoom', (updatedRoom) {
+      Provider.of<RoomDataProvider>(context, listen: false).updateRoomData(updatedRoom);
     });
   }
 
@@ -43,6 +65,14 @@ class _GameScreenState extends State<GameScreen> {
   }
 
   @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    
+    // Burada hiçbir şey yapmana gerek yok!
+    // Kullanıcı adı zaten widget.kullaniciAdi olarak hazır.
+  }
+
+  @override
   Widget build(BuildContext context) {
     final roomData = Provider.of<RoomDataProvider>(context).roomData;
 
@@ -57,10 +87,11 @@ class _GameScreenState extends State<GameScreen> {
       roomData['boardState'].map((row) => List<String>.from(row)),
     );
 
-    final mySocketId = SocketClient.instance.socket!.id;
+    //final mySocketId = SocketClient.instance.socket!.id;
+    final myNickname = widget.kullaniciAdi;
 
     final myPlayer = players.firstWhere(
-      (player) => player['socketID'] == mySocketId,
+      (player) => player['nickname'] == myNickname,
       orElse: () => null,
     );
 
@@ -71,7 +102,8 @@ class _GameScreenState extends State<GameScreen> {
     }
 
     final currentTurnSocketId = players[roomData['turnIndex']]['socketID'];
-    final isMyTurn = mySocketId == currentTurnSocketId;
+    final currentTurnNickname = players[roomData['turnIndex']]['nickname'];
+    final isMyTurn = myNickname == currentTurnNickname;
 
     return Scaffold(
       appBar: AppBar(
@@ -123,17 +155,44 @@ class _GameScreenState extends State<GameScreen> {
                   int row = index ~/ 15;
                   int col = index % 15;
                   String letter = boardState[row][col];
+                  String type = tileTypes[row][col];
+ 
+                  Color backgroundColor;
+                  Widget child;
+ 
+                  switch (type) {
+                    case 'K²':
+                      backgroundColor = Colors.green;
+                      child = const Text('K²', style: TextStyle(fontWeight: FontWeight.bold));
+                      break;
+                    case 'K³':
+                      backgroundColor = Colors.brown;
+                      child = const Text('K³', style: TextStyle(fontWeight: FontWeight.bold));
+                      break;
+                    case 'H²':
+                      backgroundColor = Colors.blue;
+                      child = const Text('H²', style: TextStyle(fontWeight: FontWeight.bold));
+                      break;
+                    case 'H³':
+                      backgroundColor = Colors.purple;
+                      child = const Text('H³', style: TextStyle(fontWeight: FontWeight.bold));
+                      break;
+                    case '⭐':
+                      backgroundColor = Colors.yellow;
+                      child = const Icon(Icons.star, color: Colors.orange);
+                      break;
+                    default:
+                      backgroundColor = Colors.white;
+                      child = Text(letter, style: const TextStyle(fontWeight: FontWeight.bold));
+                  }
 
                   return Container(
                     decoration: BoxDecoration(
                       border: Border.all(color: Colors.black12),
-                      color: letter.isEmpty ? Colors.white : Colors.orange.shade100,
+                      color: backgroundColor
                     ),
                     child: Center(
-                      child: Text(
-                        letter,
-                        style: const TextStyle(fontWeight: FontWeight.bold),
-                      ),
+                      child: child,
                     ),
                   );
                 },

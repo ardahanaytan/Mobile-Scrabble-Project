@@ -37,7 +37,13 @@ class _AktifOyunlarScreenState extends State<AktifOyunlarScreen> {
 
     _socketClient.on('joinRoomSuccess', (room) {
       Provider.of<RoomDataProvider>(context, listen: false).updateRoomData(room);
-      Navigator.pushNamed(context, '/game-screen');
+      Navigator.pushNamed(
+        context,
+        '/game-screen',
+        arguments: {
+          'kullaniciAdi': widget.kullaniciAdi, // doğru nicki gönderiyorsun
+        },
+      );
     });
 
     _socketClient.on('errorJoin', (data) {
@@ -84,7 +90,6 @@ class _AktifOyunlarScreenState extends State<AktifOyunlarScreen> {
     double basariYuzdesi = widget.toplamOyun > 0
         ? (widget.kazanilanOyun / widget.toplamOyun) * 100
         : 0;
-    print(widget.kullaniciAdi);
     return Scaffold(
       appBar: AppBar(
         title: const Text("Aktif Oyunlar"),
@@ -132,7 +137,9 @@ class _AktifOyunlarScreenState extends State<AktifOyunlarScreen> {
                             title: Text("Oda: ${room['roomName']}"),
                             subtitle: Text("Oyuncu Sayısı: ${room['players'].length}/2"),
                             trailing: ElevatedButton(
-                              onPressed: () => joinRoom(room['_id'], widget.kullaniciAdi),
+                              onPressed: () {
+                                joinRoom(room['_id'], widget.kullaniciAdi);
+                              }, 
                               child: const Text('Odaya Katıl'),
                             ),
                           );
