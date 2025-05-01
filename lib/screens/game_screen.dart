@@ -719,11 +719,11 @@ class _GameScreenState extends State<GameScreen> {
           // Apply bonuses only if the tile was placed this turn
           if (_temporaryPlacedTiles.containsKey(coord)) {
             switch (tileType) {
-              case 'K²': letterScore *= 2; break;
-              case 'K³': letterScore *= 3; break;
-              case 'H²': wordMultiplier *= 2; break;
-              case 'H³': wordMultiplier *= 3; break;
-              case '⭐': if (isFirstMove) wordMultiplier *= 2; break; // Center star bonus only on first move
+              case 'K²': wordMultiplier *= 2; break;
+              case 'K³': wordMultiplier *= 3; break;
+              case 'H²': letterScore *= 2; break;
+              case 'H³': letterScore *= 3; break;
+              case '⭐': if (isFirstMove) letterScore *= 2; break; // Center star bonus only on first move
             }
           }
           wordScore += letterScore;

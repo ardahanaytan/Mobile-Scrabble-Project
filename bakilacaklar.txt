@@ -1,0 +1,37 @@
+-pas
+-teslim olma -> oyun sonu ekranı yapılırken ayarlanabilir
+
+--nar'daki n'yi de alsın
+-- border çevresine skor 
+
+--taş geri alınabilsin hamle onaylanmadan
+-- eğer hamle yanlışsa oynanamasın
+
+-- ekran puan eklenmesi - zaten hesaplıyor
+
+!!!!puan hesaplarken tek bir yöne bakıyor diket ve yatay kontrol sağlanmalı
+
+--joker taş ayarlama
+
+
+--süre bitme, taş bitme senaryosu ile oyun bitiş kısmı bastırma;
+- harf kalmayınca oyun biter. Elinde harf kalan oyuncunun
+harflerin puanlarının toplamı taşlarını önce bitiren oyuncuya eklenirken aynı zamanda
+elinde harf kalan oyuncudan ceza puanı olarak düşülür. 
+- arka arkaya 2 kez pas geçilir ise oyun otomatik olarak biter, elde kalan harflere
+bakılmaksızın puanı fazla olan oyuncu galip sayılır
+
+--biten oyunlar sekmesi
+
+
+
+--mayınlar, ödüller
+
+?? taşıma olayı 
+Sıra kendinde olan kullanıcı kelime yazmak yerine oyun tahtasında yer alan harflerden
+birinin konumunu kendisine komşu alanlardan birine taşıyabilecektir. Bu taşıma işleminde
+dikkat edilmesi gereken kural ise sadece 1 birim kaydırabilir ve kaydıracağı yerde daha önce
+yazılmış bir harf olmamasına dikkat edilecektir. Bu işlem yapıldıktan sonra onay butonuna
+basarak sıranın karşı rakibine geçecektir.
+
+??çapraz
