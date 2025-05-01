@@ -37,9 +37,17 @@ const drawLettersFromBag = (letterBag, count) => {
 
 let waitingPlayer = null;
 
+// Placeholder for move validation logic
+// TODO: Implement actual Scrabble word validation rules
+const validateMove = (boardState, placedTiles) => {
+  console.log("Validating move (placeholder)...", placedTiles);
+  // For now, just return true. Implement real validation later.
+  return true;
+};
+
 io.on('connection', (socket) => {
     console.log('✅ Yeni bağlantı:', socket.id);
-  
+
     socket.on('findMatch', async ({ nickname, selectedMode }) => {
       console.log('Eşleşme arıyor:', nickname);
       try {
@@ -127,45 +135,122 @@ io.on('connection', (socket) => {
           console.error('joinRoom hatası:', err);
         }
     });
-      
-    socket.on('confirmMove', async ({ currentRoomId }) => {
-        if (!currentRoomId) {
-          console.log('confirmMove: currentRoomId eksik.');
+
+
+    socket.on('placeWord', async ({ roomId, nickname, placedTiles }) => {
+      console.log(`placeWord event received from ${nickname} for room ${roomId}`, placedTiles);
+      try {
+        const room = await Room.findById(roomId);
+
+        if (!room) {
+          console.error(`placeWord Error: Room ${roomId} not found.`);
+          // Optionally emit an error back to the sender
+          // socket.emit('gameError', { message: 'Oda bulunamadı.' });
           return;
         }
-      
-        try {
-          const room = await Room.findById(currentRoomId);
-      
-          if (!room) {
-            console.log(`confirmMove: Oda (${currentRoomId}) bulunamadı.`);
-            return;
-          }
-      
-          if (room.isGameOver) {
-            console.log(`confirmMove: Oyun zaten bitmiş (${currentRoomId}).`);
-            return;
-          }
-      
-          room.turnIndex = (room.turnIndex + 1) % room.players.length;
-          room.lastMoveTime = new Date();
-      
-          await room.save();
-      
-          io.to(currentRoomId).emit('updateRoom', room);
-      
-          console.log(`confirmMove: ${currentRoomId} odasında hamle sırası değiştirildi.`);
-        } catch (err) {
-          console.error(`confirmMove hatası (${currentRoomId}):`, err);
+
+        if (room.isGameOver) {
+          console.log(`placeWord Info: Game in room ${roomId} is already over.`);
+          return;
         }
+
+        const playerIndex = room.players.findIndex(p => p.nickname === nickname);
+        if (playerIndex === -1) {
+          console.error(`placeWord Error: Player ${nickname} not found in room ${roomId}.`);
+          // socket.emit('gameError', { message: 'Oyuncu odada bulunamadı.' });
+          return;
+        }
+
+        // Check if it's the player's turn
+        if (room.turnIndex !== playerIndex) {
+          console.warn(`placeWord Warning: Not player ${nickname}'s turn in room ${roomId}.`);
+          // socket.emit('gameError', { message: 'Sıra sizde değil.' });
+          return;
+        }
+
+        // --- Basic Move Validation (Placeholder) ---
+        if (!validateMove(room.boardState, placedTiles)) {
+           console.log(`placeWord Info: Invalid move by ${nickname} in room ${roomId}.`);
+           // socket.emit('gameError', { message: 'Geçersiz hamle.' });
+           // TODO: Potentially revert temporary client state if needed
+           return;
+        }
+        // --- End Validation ---
+
+
+        // --- Update Board State ---
+        placedTiles.forEach(tile => {
+          if (tile.row >= 0 && tile.row < 15 && tile.col >= 0 && tile.col < 15) {
+            // Ensure the target square on the board is actually empty before placing
+            if (room.boardState[tile.row][tile.col] === '') {
+               room.boardState[tile.row][tile.col] = tile.letter;
+            } else {
+               // This case should ideally be prevented by client-side checks
+               // and more robust server validation, but log it for now.
+               console.warn(`placeWord Warning: Attempted to place tile on non-empty square (${tile.row}, ${tile.col}) in room ${roomId}`);
+            }
+          } else {
+             console.warn(`placeWord Warning: Invalid tile coordinates (${tile.row}, ${tile.col}) received for room ${roomId}`);
+          }
+        });
+        // Mark boardState as modified for Mongoose
+        room.markModified('boardState');
+        // --- End Update Board State ---
+
+
+        // --- Update Player Rack & Points (Placeholders) ---
+        const player = room.players[playerIndex];
+        let pointsEarned = 0; // TODO: Calculate actual points
+        let lettersUsedCount = 0;
+
+        placedTiles.forEach(tile => {
+          const letterIndex = player.rack.indexOf(tile.letter);
+          if (letterIndex !== -1) {
+            player.rack.splice(letterIndex, 1);
+            lettersUsedCount++;
+          } else {
+            // Handle potential cheating or errors (player didn't have the tile)
+            console.error(`placeWord Error: Player ${nickname} in room ${roomId} did not have tile ${tile.letter}.`);
+            // Decide how to handle this - revert move? penalize?
+          }
+        });
+
+        // Draw new letters
+        const lettersToDraw = Math.min(lettersUsedCount, room.letterBag.length);
+        const newLetters = drawLettersFromBag(room.letterBag, lettersToDraw);
+        player.rack.push(...newLetters);
+        player.points += pointsEarned; // Add calculated points
+        // Mark players array as modified
+        room.markModified('players');
+        // --- End Update Player Rack & Points ---
+
+
+        // --- Advance Turn ---
+        room.turnIndex = (room.turnIndex + 1) % room.players.length;
+        room.lastMoveTime = new Date();
+        // --- End Advance Turn ---
+
+        // --- Check Game Over (Basic) ---
+        // TODO: Implement proper game over conditions (e.g., bag empty + player rack empty, consecutive passes)
+        // --- End Check Game Over ---
+
+
+        await room.save();
+
+        // Broadcast updated room state to all players in the room
+        io.to(roomId).emit('updateRoom', room);
+        console.log(`placeWord Success: Move by ${nickname} processed in room ${roomId}. Turn advanced.`);
+
+      } catch (err) {
+        console.error(`placeWord Error processing move in room ${roomId} for ${nickname}:`, err);
+        // Optionally emit a generic error
+        // socket.emit('gameError', { message: 'Hamle işlenirken bir sunucu hatası oluştu.' });
+      }
     });
-      
-      
-      
-  
+
+
     // Diğer eventler...
 });
-
 
 
 server.listen(port, "0.0.0.0", () => {
