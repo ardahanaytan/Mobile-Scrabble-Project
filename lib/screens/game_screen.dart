@@ -51,10 +51,12 @@ class _GameScreenState extends State<GameScreen> {
   Set<int> _usedRackIndices = {};
   Set<String> _validWords = {}; // To store the dictionary
   bool _dictionaryLoaded = false;
-  // Store validation status for each temporarily placed tile's position
-  // true = part of valid word(s), false = part of invalid word(s), null = not checked yet or not part of a word
-  Map<(int, int), bool?> _tileValidationStatus = {};
+  // Store validation status for each temporarily placed tile's position (REMOVED - using word groups now)
+  // Map<(int, int), bool?> _tileValidationStatus = {};
   int _potentialScore = 0; // Score for the current temporary placement
+  // Store word groups for the painter: list of (list of coordinates, validity)
+  List<({List<(int, int)> coords, bool isValid})> _validatedWordGroups = [];
+
 
   @override
   void initState() {
@@ -74,7 +76,7 @@ class _GameScreenState extends State<GameScreen> {
         setState(() {
           _temporaryPlacedTiles.clear();
           _usedRackIndices.clear();
-          _tileValidationStatus.clear(); // Clear validation status on update
+          _validatedWordGroups.clear(); // Clear word groups on update
           _potentialScore = 0; // Reset potential score
         });
         Provider.of<RoomDataProvider>(context, listen: false).updateRoomData(updatedRoom);
@@ -206,128 +208,127 @@ class _GameScreenState extends State<GameScreen> {
           Expanded(
             child: Padding(
               padding: const EdgeInsets.all(8.0),
-              child: GridView.builder(
-                gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                  crossAxisCount: 15,
-                  crossAxisSpacing: 2,
-                  mainAxisSpacing: 2,
-                ),
-                itemCount: 15 * 15,
-                itemBuilder: (context, index) {
-                  int row = index ~/ 15;
-                  int col = index % 15;
-                  // Check if a tile was temporarily placed here
-                  String? placedLetter = _temporaryPlacedTiles[(row, col)];
-                  String boardLetter = boardState[row][col]; // Original letter from server state
-                  String displayLetter = placedLetter ?? boardLetter; // Show placed tile if exists
-                  String type = tileTypes[row][col];
+              // Wrap GridView in a Stack to overlay the painter
+              child: Stack(
+                children: [
+                  GridView.builder( // Base layer: Grid
+                    gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                      crossAxisCount: 15,
+                      // No spacing needed here if painter draws borders correctly
+                    ),
+                    itemCount: 15 * 15,
+                    itemBuilder: (context, index) {
+                       int row = index ~/ 15;
+                       int col = index % 15;
+                       String? placedLetter = _temporaryPlacedTiles[(row, col)];
+                       String boardLetter = boardState[row][col];
+                       String displayLetter = placedLetter ?? boardLetter;
+                       String type = tileTypes[row][col];
+                       Color backgroundColor;
+                       Widget? textChild;
 
-                  Color backgroundColor;
-                  Widget? textChild; // Use Widget? to allow null for icon
+                       // Determine background based on tile type
+                       if(isAlpha(boardLetter) || (boardLetter == 'Ç' || boardLetter == 'Ö' || boardLetter == 'İ' || boardLetter == 'Ş' || boardLetter == 'Ü' || boardLetter == 'Ğ' || boardLetter == ' ')) {
+                         // Confirmed letter on a normal tile
+                         backgroundColor = Colors.pink.shade300; // Use a distinct color for confirmed letters
+                       }
+                       else
+                       {
+                         switch (type) {
+                         case 'K²':
+                           backgroundColor = Colors.green;
+                           textChild = const Text('K²', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 10, color: Colors.black54));
+                           break;
+                         case 'K³':
+                           backgroundColor = Colors.brown;
+                           textChild = const Text('K³', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 10, color: Colors.black54));
+                           break;
+                         case 'H²':
+                           backgroundColor = Colors.blue;
+                           textChild = const Text('H²', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 10, color: Colors.black54));
+                           break;
+                         case 'H³':
+                           backgroundColor = Colors.purple;
+                           textChild = const Text('H³', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 10, color: Colors.black54));
+                           break;
+                         case '⭐':
+                           backgroundColor = Colors.yellow;
+                           textChild = const Icon(Icons.star, color: Colors.orange, size: 16);
+                           break;
+                         default: // Normal tile
+                           backgroundColor = Colors.white;
+                           textChild = null;
+                         }
+                       }
 
-                  // Determine background based on tile type
-                  if(isAlpha(boardLetter) || (boardLetter == 'Ç' || boardLetter == 'Ö' || boardLetter == 'İ' || boardLetter == 'Ş' || boardLetter == 'Ü' || boardLetter == 'Ğ' || boardLetter == ' ')) {
-                    // Confirmed letter on a normal tile
-                    backgroundColor = Colors.pink.shade300; // Use a distinct color for confirmed letters
-                  }
-                  else
-                  {
-                    switch (type) {
-                    case 'K²':
-                      backgroundColor = Colors.green; // Lighter blue for H²
-                      textChild = const Text('K²', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 10, color: Colors.black54));
-                      break;
-                    case 'K³':
-                      backgroundColor = Colors.brown; // Lighter blue for H²
-                      textChild = const Text('K³', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 10, color: Colors.black54));
-                      break;
-                    case 'H²':
-                      backgroundColor = Colors.blue; // Lighter blue for H²
-                      textChild = const Text('H²', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 10, color: Colors.black54));
-                      break;
-                    case 'H³':
-                      backgroundColor = Colors.purple; // Lighter indigo for H³
-                      textChild = const Text('H³', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 10, color: Colors.black54));
-                      break;
-                    case '⭐':
-                      backgroundColor = Colors.yellow; // Center star
-                      textChild = const Icon(Icons.star, color: Colors.orange, size: 16);
-                      break;
-                    default: // Normal tile
-                      backgroundColor = Colors.white;
-                      textChild = null; // No special text/icon needed initially
-                    }
-                  }
+                       // If there's a letter (either from board state or temporary placement), display it
+                       Widget displayContent;
+                       if (placedLetter != null) {
+                         // If a tile is temporarily placed here
+                         displayContent = Text(
+                           placedLetter,
+                           style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18, color: Colors.black),
+                         );
+                       } else if (boardLetter.isNotEmpty) {
+                         // If the square has a letter from the server state
+                         displayContent = Text(
+                           boardLetter,
+                           style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
+                         );
+                       }
+                        else {
+                         // If square is empty and no temporary tile
+                         displayContent = textChild ?? const SizedBox.shrink();
+                       }
 
-                  // If there's a letter (either from board state or temporary placement), display it
-                  Widget displayContent;
-                  if (placedLetter != null) {
-                    // If a tile is temporarily placed here
-                    displayContent = Text(
-                      placedLetter, // Always show the placed letter
-                      style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18, color: Colors.black), // Black text
-                    );
-                  } else if (boardLetter.isNotEmpty) {
-                    // If the square has a letter from the server state (already confirmed move)
-                    displayContent = Text(
-                      boardLetter,
-                      style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18), // Default text color (likely black)
-                    );
-                  }
-                   else {
-                    // If square is empty and no temporary tile, show the tile type text/icon if it exists
-                    displayContent = textChild ?? const SizedBox.shrink();
-                  }
+                       // Data type for DragTarget is now Map<String, dynamic>
+                       return DragTarget<Map<String, dynamic>>(
+                         builder: (context, candidateData, rejectedData) {
+                            Color currentBackgroundColor = backgroundColor;
+                            if (candidateData.isNotEmpty) {
+                              currentBackgroundColor = Colors.yellow.shade200; // Highlight potential drop
+                            } else if (placedLetter != null) {
+                              // Use a different color for temporarily placed tiles if desired
+                              currentBackgroundColor = Colors.yellow.shade300;
+                            }
 
+                            // Per-tile border logic removed
 
-                  // Data type for DragTarget is now Map<String, dynamic>
-                  return DragTarget<Map<String, dynamic>>(
-                    builder: (context, candidateData, rejectedData) {
-                      // Determine background color
-                      Color currentBackgroundColor = backgroundColor;
-                      if (candidateData.isNotEmpty) {
-                        currentBackgroundColor = Colors.yellow; // Highlight potential drop
-                      } else if (placedLetter != null) {
-                        currentBackgroundColor = Colors.yellow.shade300; // Solid blue for placed tile
-                      }
-
-                      // Determine border based on validation status
-                      Border border = Border.all(color: Colors.black26, width: 0.5); // Default border
-                      if (placedLetter != null) {
-                        bool? isValid = _tileValidationStatus[(row, col)];
-                        if (isValid == true) {
-                          border = Border.all(color: Colors.green, width: 2.0); // Valid word tile
-                        } else if (isValid == false) {
-                          border = Border.all(color: Colors.red.shade300, width: 2.0); // Invalid word tile
-                        }
-                      }
-
-                      return Container(
-                        decoration: BoxDecoration(
-                          border: border, // Use the determined border
-                          color: currentBackgroundColor, // Use the determined background color
-                        ),
-                        child: Center(
-                          child: displayContent, // Shows placed letter (black), board letter, or tile type
+                            return Container(
+                               decoration: BoxDecoration(
+                                 border: Border.all(color: Colors.black26, width: 0.5), // Keep thin grid line
+                                 color: currentBackgroundColor,
+                               ),
+                               child: Center(child: displayContent),
+                             );
+                         },
+                         onWillAccept: (data) {
+                           return data != null && boardLetter.isEmpty && placedLetter == null;
+                         },
+                         onAccept: (data) {
+                           setState(() {
+                             _temporaryPlacedTiles[(row, col)] = data['letter']!;
+                             _usedRackIndices.add(data['rackIndex']!);
+                             _validateAndScoreMove(boardState);
+                           });
+                         },
+                       );
+                    },
+                  ),
+                  LayoutBuilder( // Overlay layer: Painter
+                    builder: (context, constraints) {
+                      // Calculate cell size based on available width
+                      double cellSize = constraints.maxWidth / 15;
+                      return CustomPaint(
+                        size: Size.infinite, // Take up the same space as the GridView
+                        painter: _WordBorderPainter(
+                          wordGroups: _validatedWordGroups,
+                          cellSize: cellSize,
                         ),
                       );
-                    },
-                    onWillAccept: (data) {
-                      // Allow drop only if the square is empty (both original and temporary)
-                      // and the data is the expected type (Map)
-                      return data != null && boardLetter.isEmpty && placedLetter == null;
-                    },
-                    onAccept: (data) {
-                      // data is {'letter': String, 'rackIndex': int}
-                      setState(() {
-                        _temporaryPlacedTiles[(row, col)] = data['letter']!;
-                        _usedRackIndices.add(data['rackIndex']!);
-                        // Trigger validation and scoring after a tile is placed
-                        _validateAndScoreMove(boardState);
-                      });
-                    },
-                  );
-                },
+                    }
+                  ),
+                ],
               ),
             ),
           ),
@@ -438,7 +439,7 @@ class _GameScreenState extends State<GameScreen> {
                    setState(() {
                      _temporaryPlacedTiles.clear();
                      _usedRackIndices.clear();
-                     _tileValidationStatus.clear(); // Clear validation on submit
+                     _validatedWordGroups.clear(); // Clear word groups on submit
                      _potentialScore = 0; // Reset score on submit
                    });
                } else {
@@ -468,8 +469,9 @@ class _GameScreenState extends State<GameScreen> {
   // --- Word Validation and Scoring Logic ---
 
   void _validateAndScoreMove(List<List<String>> boardState) {
-    _tileValidationStatus.clear(); // Clear previous validation
+    _validatedWordGroups.clear(); // Clear previous word groups
     _potentialScore = 0;
+    bool placementValidButNoWord = false; // Declare at the top
 
     if (_temporaryPlacedTiles.isEmpty) {
       setState(() {}); // Update UI if tiles were removed
@@ -692,20 +694,25 @@ class _GameScreenState extends State<GameScreen> {
 
     // --- 3. Validate Words & Calculate Score ---
     int totalScore = 0;
-    bool allWordsValid = true;
-    Set<(int, int)> invalidWordCoords = {}; // Track coords belonging to invalid words
+    // Use new variables for word group logic
+    bool overallPlacementValid = isConnectedToBoard; // Start with connection status
+    List<({List<(int, int)> coords, bool isValid})> currentWordGroups = [];
+    Set<(int, int)> allInvalidCoords = {}; // Track all coords part of *any* invalid word
 
     for (var wordData in wordsFound) {
       // Use Turkish uppercasing for dictionary check
       String word = _toUpperCaseTurkish(wordData.word);
-      bool isValid = _validWords.contains(word);
-      print("Checking word: ${wordData.word} ($word) -> Valid: $isValid");
+      bool isWordValid = _validWords.contains(word);
+      print("Checking word: ${wordData.word} ($word) -> Valid: $isWordValid");
 
-      if (!isValid) {
-        allWordsValid = false;
-        invalidWordCoords.addAll(wordData.coords);
+      // Add to groups for painter
+      currentWordGroups.add((coords: wordData.coords, isValid: isWordValid));
+
+      if (!isWordValid) {
+        overallPlacementValid = false; // If any word is invalid, the overall placement score is 0
+        allInvalidCoords.addAll(wordData.coords);
       } else {
-        // Calculate score for this valid word
+        // Calculate score only for valid words
         int wordScore = 0;
         int wordMultiplier = 1;
         for (var coord in wordData.coords) {
@@ -732,39 +739,29 @@ class _GameScreenState extends State<GameScreen> {
       }
     }
 
-    // --- 4. Update UI State ---
-    setState(() {
-      if (allWordsValid) {
-        _potentialScore = totalScore;
-        // Mark all temporarily placed tiles as valid
-        for (var coord in _temporaryPlacedTiles.keys) {
-           // Only mark as valid if not part of an invalid cross-word
-           if (!invalidWordCoords.contains(coord)) {
-               _tileValidationStatus[coord] = true;
-           } else {
-               _tileValidationStatus[coord] = false; // Part of an invalid word
-           }
-        }
-         // If any part was invalid, reset score and mark all as invalid
-         if (invalidWordCoords.isNotEmpty) {
-             _potentialScore = 0;
-             _markAllTemporaryTilesInvalid(updateState: false); // Already in setState
-         }
+    // --- 4. Determine Final State Values ---
+    List<({List<(int, int)> coords, bool isValid})> finalValidatedWordGroups = currentWordGroups;
+    int finalPotentialScore = totalScore;
 
-      } else {
-        _potentialScore = 0;
-        // Mark tiles involved in invalid words as false, others as potentially true (if not involved)
-         for (var coord in _temporaryPlacedTiles.keys) {
-             if (invalidWordCoords.contains(coord)) {
-                 _tileValidationStatus[coord] = false;
-             } else {
-                 // This tile might be part of a valid word, but another word was invalid.
-                 // Keep it null or potentially mark true if needed elsewhere? For now, mark false.
-                 _tileValidationStatus[coord] = false; // Simplification: if any word invalid, all placed tiles are marked red
-             }
-         }
-      }
-       print("Final Score: $_potentialScore, Validation Status: $_tileValidationStatus");
+    // Handle the case where placement is valid but no word > 1 formed
+    if (placementValidButNoWord) {
+        // Mark individual temporary tiles as 'valid' for the painter to draw green borders around them individually
+         finalValidatedWordGroups = _temporaryPlacedTiles.keys.map((coord) => (coords: [coord], isValid: true)).toList();
+         // overallPlacementValid = true; // Already true if connected
+         finalPotentialScore = 0; // No score
+    } else if (!overallPlacementValid) {
+        // If any word was invalid OR connection failed earlier, ensure score is 0
+        finalPotentialScore = 0;
+        // Optionally, force all groups to red if *any* part is invalid:
+        // finalValidatedWordGroups = currentWordGroups.map((g) => (coords: g.coords, isValid: false)).toList();
+    }
+
+    // --- 5. Update UI State ---
+    setState(() {
+       _validatedWordGroups = finalValidatedWordGroups;
+       _potentialScore = finalPotentialScore;
+
+       print("Final Score: $_potentialScore, Word Groups: $_validatedWordGroups");
     });
   }
 
@@ -794,19 +791,18 @@ class _GameScreenState extends State<GameScreen> {
 }
 
 
-  // Helper to mark all temporary tiles as invalid
+  // Helper to mark all temporary tiles as invalid (updates word groups for painter)
   void _markAllTemporaryTilesInvalid({bool updateState = true}) {
-    Map<(int, int), bool?> newStatus = {};
-    for (var coord in _temporaryPlacedTiles.keys) {
-      newStatus[coord] = false;
-    }
+     List<({List<(int, int)> coords, bool isValid})> invalidGroups =
+         _temporaryPlacedTiles.keys.map((coord) => (coords: [coord], isValid: false)).toList();
+
      if (updateState) {
         setState(() {
-            _tileValidationStatus = newStatus;
+            _validatedWordGroups = invalidGroups; // Update word groups
             _potentialScore = 0;
         });
      } else {
-         _tileValidationStatus = newStatus;
+         _validatedWordGroups = invalidGroups; // Update word groups
          _potentialScore = 0;
      }
   }
@@ -820,3 +816,71 @@ class _GameScreenState extends State<GameScreen> {
     return '${minutes.toString().padLeft(2, '0')}:${remainingSeconds.toString().padLeft(2, '0')}';
   }
 }
+// --- Custom Painter for Word Borders ---
+
+class _WordBorderPainter extends CustomPainter {
+  final List<({List<(int, int)> coords, bool isValid})> wordGroups;
+  final double cellSize; // Calculate this based on GridView size
+
+  _WordBorderPainter({required this.wordGroups, required this.cellSize});
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    print("--- Painting Borders ---"); // Debug Start
+    print("Cell Size: $cellSize");
+    print("Word Groups Received: $wordGroups");
+
+    final Paint greenPaint = Paint()
+      ..color = Colors.blue
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 3.0; // Make border slightly thicker
+
+    final Paint redPaint = Paint()
+      ..color = Colors.orange
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 3.0; // Make border slightly thicker
+
+    for (var group in wordGroups) {
+      if (group.coords.isEmpty) continue;
+
+      // Find min/max row/col to determine bounding box
+      int minRow = group.coords.first.$1;
+      int maxRow = group.coords.first.$1;
+      int minCol = group.coords.first.$2;
+      int maxCol = group.coords.first.$2;
+
+      for (var coord in group.coords) {
+        minRow = coord.$1 < minRow ? coord.$1 : minRow;
+        maxRow = coord.$1 > maxRow ? coord.$1 : maxRow;
+        minCol = coord.$2 < minCol ? coord.$2 : minCol;
+        maxCol = coord.$2 > maxCol ? coord.$2 : maxCol;
+      }
+
+      // Calculate rect coordinates based on cell size
+      // Draw exactly on the outer boundaries of the bounding box
+      final Rect rect = Rect.fromLTRB(
+        minCol * cellSize,
+        minRow * cellSize,
+        (maxCol + 1) * cellSize,
+        (maxRow + 1) * cellSize,
+      );
+
+      // Choose paint based on validity
+      final Paint paintToUse = group.isValid ? greenPaint : redPaint;
+
+      print("Painting Group: Coords=${group.coords}, Valid=${group.isValid}, Rect=$rect, Color=${group.isValid ? 'Green' : 'Red'}"); // Debug Paint
+
+      // Draw the rectangle
+      canvas.drawRect(rect, paintToUse);
+    }
+     print("--- End Painting Borders ---"); // Debug End
+  }
+
+  @override
+  bool shouldRepaint(covariant _WordBorderPainter oldDelegate) {
+    // Repaint if word groups or cell size change
+    return oldDelegate.wordGroups != wordGroups || oldDelegate.cellSize != cellSize;
+  }
+}
+
+// --- End Custom Painter ---
