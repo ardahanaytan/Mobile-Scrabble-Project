@@ -41,6 +41,7 @@ io.on('connection', (socket) => {
     console.log('✅ Yeni bağlantı:', socket.id);
   
     socket.on('findMatch', async ({ nickname, selectedMode }) => {
+      console.log('Eşleşme arıyor:', nickname);
       try {
         const player = {
           socketID: socket.id,
@@ -49,14 +50,15 @@ io.on('connection', (socket) => {
         };
   
         if (!waitingPlayer) {
+          console.log('Bekleyen oyuncu yok, beklemeye alınıyor:', player);
           // Kimse yoksa beklemeye al
           waitingPlayer = { socket, player, selectedMode };
           return;
         }
-  
+        console.log('Bekleyen oyuncu bulundu:', waitingPlayer.player);
         // Bekleyen biri var, eşleştir
         const room = new Room({
-            roomName: `oda-${waitingPlayer.socket.id}-${socket.id}`,
+          roomName: `oda-${waitingPlayer.socket.id}-${socket.id}`,
         });
   
         player.rack = drawLettersFromBag(room.letterBag, 7);

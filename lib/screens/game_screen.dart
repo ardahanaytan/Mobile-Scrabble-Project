@@ -36,15 +36,21 @@ class _GameScreenState extends State<GameScreen> {
   @override
   void initState() {
     super.initState();
+
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      calculateRemainingTime();
+      if (mounted) {
+        calculateRemainingTime();
+      }
     });
 
     final socket = SocketClient.instance.socket!;
     socket.on('updateRoom', (updatedRoom) {
-      Provider.of<RoomDataProvider>(context, listen: false).updateRoomData(updatedRoom);
+      if (mounted) {
+        Provider.of<RoomDataProvider>(context, listen: false).updateRoomData(updatedRoom);
+      }
     });
   }
+
 
   void calculateRemainingTime() {
     final roomData = Provider.of<RoomDataProvider>(context, listen: false).roomData;
@@ -76,7 +82,7 @@ class _GameScreenState extends State<GameScreen> {
   Widget build(BuildContext context) {
     final roomData = Provider.of<RoomDataProvider>(context).roomData;
 
-    if (roomData.isEmpty || roomData['players'] == null || roomData['boardState'] == null) {
+    if (roomData['players'] == null || roomData['boardState'] == null) {
       return const Scaffold(
         body: Center(child: CircularProgressIndicator()),
       );

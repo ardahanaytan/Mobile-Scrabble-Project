@@ -6,8 +6,9 @@ import 'package:provider/provider.dart';
 
 class LobbyScreen extends StatefulWidget {
   static String routeName = '/lobby-screen';
+  final String kullaniciAdi;
 
-  const LobbyScreen({Key? key}) : super(key: key);
+  const LobbyScreen({Key? key, required this.kullaniciAdi}) : super(key: key);
 
   @override
   State<LobbyScreen> createState() => _LobbyScreenState();
@@ -21,15 +22,19 @@ class _LobbyScreenState extends State<LobbyScreen> {
     super.initState();
 
     _socketClient.on('matchFound', (room) {
-      print('💬 matchFound VERİSİ: $room');
       Provider.of<RoomDataProvider>(context, listen: false).updateRoomData(room['room']);
 
       WidgetsBinding.instance.addPostFrameCallback((_) {
-        Navigator.pushReplacementNamed(context, GameScreen.routeName);
+        Navigator.pushReplacementNamed(
+          context,
+          GameScreen.routeName,
+          arguments: {
+            'kullaniciAdi': widget.kullaniciAdi, // ✅ Artık tanımlı
+          },
+        );
       });
     });
   }
-
 
   @override
   void dispose() {
@@ -43,13 +48,13 @@ class _LobbyScreenState extends State<LobbyScreen> {
       body: Center(
         child: Column(
           mainAxisSize: MainAxisSize.min,
-          children: [
-            const Text(
+          children: const [
+            Text(
               'Rakip Bekleniyor...',
               style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
             ),
-            const SizedBox(height: 20),
-            const CircularProgressIndicator(),
+            SizedBox(height: 20),
+            CircularProgressIndicator(),
           ],
         ),
       ),

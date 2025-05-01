@@ -7,7 +7,7 @@ import 'package:flutter_application_1/utils/colors.dart';
 import 'package:flutter_application_1/screens/main_menu_screen.dart';
 import 'package:flutter_application_1/screens/game_screen.dart';
 import 'package:provider/provider.dart';
-import 'package:flutter_dotenv/flutter_dotenv.dart'; 
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 
 Future<void> main() async {
   try {
@@ -37,16 +37,22 @@ class MyApp extends StatelessWidget {
           MainMenuScreen.routeName: (context) => const MainMenuScreen(),
           LoginScreen.routeName: (context) => const LoginScreen(),
           RegisterScreen.routeName: (context) => const RegisterScreen(),
-          LobbyScreen.routeName: (context) => const LobbyScreen(),
         },
         onGenerateRoute: (settings) {
-          if (settings.name == GameScreen.routeName) {
+          if (settings.name == LobbyScreen.routeName) {
             final args = settings.arguments as Map<String, dynamic>;
-            final nickname = args['kullaniciAdi']; // ARTIK arguments'dan çekiyoruz
             return MaterialPageRoute(
-              builder: (context) => GameScreen(kullaniciAdi: nickname),
+              builder: (context) => LobbyScreen(kullaniciAdi: args['kullaniciAdi']),
             );
           }
+
+          if (settings.name == GameScreen.routeName) {
+            final args = settings.arguments as Map<String, dynamic>;
+            return MaterialPageRoute(
+              builder: (context) => GameScreen(kullaniciAdi: args['kullaniciAdi']),
+            );
+          }
+
           return null;
         },
       ),

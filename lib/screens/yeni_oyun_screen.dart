@@ -34,7 +34,7 @@ class _YeniOyunScreenState extends State<YeniOyunScreen> {
     kullaniciAdi = widget.kullaniciAdi;
     kazanilanOyun = widget.kazanilanOyun;
     toplamOyun = widget.toplamOyun;
-    _socketMethods.matchFoundListener(context);
+    _socketMethods.matchFoundListener(context, kullaniciAdi);
   }
 
   @override
@@ -79,7 +79,13 @@ class _YeniOyunScreenState extends State<YeniOyunScreen> {
                     text: "Hızlı Oyun (2 dakika)",
                     onTap: () {
                       _socketMethods.findMatch(kullaniciAdi, "2dk");
-                      Navigator.pushNamed(context, LobbyScreen.routeName);
+                      Navigator.pushNamed(
+                        context,
+                        LobbyScreen.routeName,
+                        arguments: {
+                          'kullaniciAdi': kullaniciAdi,
+                        },
+                      );
                     },
                   ),
                   const SizedBox(height: 16),
@@ -87,7 +93,13 @@ class _YeniOyunScreenState extends State<YeniOyunScreen> {
                     text: "Hızlı Oyun (5 dakika)",
                     onTap: () {
                       _socketMethods.findMatch(kullaniciAdi, "5dk");
-                      Navigator.pushNamed(context, LobbyScreen.routeName);
+                      Navigator.pushNamed(
+                        context,
+                        LobbyScreen.routeName,
+                        arguments: {
+                          'kullaniciAdi': kullaniciAdi,
+                        },
+                      );
                     },
                   ),
                   const SizedBox(height: 16),
@@ -95,7 +107,13 @@ class _YeniOyunScreenState extends State<YeniOyunScreen> {
                     text: "Genişletilmiş Oyun (12 saat)",
                     onTap: () {
                       _socketMethods.findMatch(kullaniciAdi, "12saat");
-                      Navigator.pushNamed(context, LobbyScreen.routeName);
+                      Navigator.pushNamed(
+                        context,
+                        LobbyScreen.routeName,
+                        arguments: {
+                          'kullaniciAdi': kullaniciAdi,
+                        },
+                      );
                     },
                   ),
                   const SizedBox(height: 16),
@@ -103,7 +121,13 @@ class _YeniOyunScreenState extends State<YeniOyunScreen> {
                     text: "Genişletilmiş Oyun (24 saat)",
                     onTap: () {
                       _socketMethods.findMatch(kullaniciAdi, "24saat");
-                      Navigator.pushNamed(context, LobbyScreen.routeName);
+                      Navigator.pushNamed(
+                        context,
+                        LobbyScreen.routeName,
+                        arguments: {
+                          'kullaniciAdi': kullaniciAdi,
+                        },
+                      );
                     },
                   ),
                 ],

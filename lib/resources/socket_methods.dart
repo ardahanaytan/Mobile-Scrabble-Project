@@ -16,12 +16,33 @@ class SocketMethods {
     }
   }
 
-  void matchFoundListener(BuildContext context) {
-    _socketClient.on('matchFound', (room) {
-      Provider.of<RoomDataProvider>(context, listen: false).updateRoomData(room);
-      Navigator.pushNamed(context, GameScreen.routeName);
-    });
-  }
+  void matchFoundListener(BuildContext context, String nickname) {
+  _socketClient.on('matchFound', (room) {
+    final roomData = room['room']; // 👈 Doğru veriyi al
+    Provider.of<RoomDataProvider>(context, listen: false).updateRoomData(roomData);
+
+    final players = roomData['players'];
+
+    final myPlayer = players.firstWhere(
+      (p) => p['nickname'] == nickname,
+      orElse: () => null,
+    );
+
+    if (myPlayer == null) {
+      print("matchFoundListener: Oyuncu bulunamadı.");
+      return;
+    }
+
+    Navigator.pushNamed(
+      context,
+      GameScreen.routeName,
+      arguments: {
+        'kullaniciAdi': myPlayer['nickname'],
+      },
+    );
+  });
+}
+
 
   void removeListeners() {}
 
