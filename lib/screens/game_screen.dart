@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_application_1/provider/room_data_provide.dart';
 import 'package:flutter/services.dart' show rootBundle; // Import for loading assets
 import 'package:flutter_application_1/resources/socket_client.dart';
+import 'package:flutter_application_1/screens/game_over_screen.dart';
 import 'package:provider/provider.dart';
 import 'package:string_validator/string_validator.dart';
 
@@ -150,6 +151,26 @@ class _GameScreenState extends State<GameScreen> {
   @override
   Widget build(BuildContext context) {
     final roomData = Provider.of<RoomDataProvider>(context).roomData;
+
+    if (roomData['isGameOver'] == true) {
+      final kazanan = roomData['players']
+          .reduce((a, b) => a['points'] > b['points'] ? a : b)['nickname'];
+
+      Future.microtask(() {
+        Navigator.of(context).pushReplacement(
+          MaterialPageRoute(
+            builder: (context) => GameOverScreen(
+              kazanan: kazanan,
+              oyuncular: List<Map<String, dynamic>>.from(roomData['players']),
+            ),
+          ),
+        );
+      });
+
+      return const Scaffold(
+        body: Center(child: CircularProgressIndicator()),
+      );
+    }
 
     // Also wait for the dictionary to load
     if (roomData['players'] == null || roomData['boardState'] == null || !_dictionaryLoaded) {

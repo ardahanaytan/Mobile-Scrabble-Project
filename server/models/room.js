@@ -61,6 +61,10 @@ const roomSchema = new mongoose.Schema({
     direction: { type: String, enum: ['horizontal', 'vertical'] },
     score: Number,
   }],
+  consecutivePasses: {
+    type: Number,
+    default: 0
+  },
 }, { timestamps: true });
 
 module.exports = mongoose.model('Room', roomSchema);

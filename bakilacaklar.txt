@@ -5,23 +5,18 @@ CUMA
 
 VEYA 
 
--- taşların içinde puan gözükcek.
 -- süre bitme, taş bitme senaryosu ile oyun bitiş kısmı bastırma;
 -- harf kalmayınca oyun biter. Elinde harf kalan oyuncunun
 harflerin puanlarının toplamı taşlarını önce bitiren oyuncuya eklenirken aynı zamanda
 elinde harf kalan oyuncudan ceza puanı olarak düşülür. 
--- arka arkaya 2 kez pas geçilir ise oyun otomatik olarak biter, elde kalan harflere
-bakılmaksızın puanı fazla olan oyuncu galip sayılır
 -- teslim olma -> oyun sonu ekranı yapılırken ayarlanabilir
 
 CUMARTESİ 
 
 --üstteki veyadan kalanlar
 --üsttekilerden VARSA(OLMASIN) eksikler
---joker taş ayarlama
 
 --biten oyunlar sekmesi
---aktif oyunlar live düzenleme!
 
 --mayınlar, ödüller
 
