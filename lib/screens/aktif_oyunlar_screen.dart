@@ -134,8 +134,33 @@ class _AktifOyunlarScreenState extends State<AktifOyunlarScreen> {
                         itemBuilder: (context, index) {
                           final room = activeRooms[index];
                           return ListTile(
-                            title: Text("Oda: ${room['roomName']}"),
-                            subtitle: Text("Oyuncu Sayısı: ${room['players'].length}/2"),
+                            title: Text("Oda: ${room['roomName']}", style: const TextStyle(fontSize: 14)),
+                            //subtitle: Text("Oyuncu Sayısı: ${room['players'].length}/2"),
+                            subtitle: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                const SizedBox(height: 4),
+                                if (room['players'].length == 2)
+                                  Text(
+                                    "${room['players'][0]['nickname']} ${room['players'][0]['points']} - ${room['players'][1]['points']} ${room['players'][1]['nickname']}",
+                                    style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
+                                  )
+                                else
+                                  // fallback for 1-player room
+                                  Text(
+                                    "${room['players'][0]['nickname']} ${room['players'][0]['points']} puan",
+                                    style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
+                                  ),
+                                const SizedBox(height: 4),
+                                Text(
+                                  "Sıra: ${room['players'][room['turnIndex']]['nickname']}",
+                                  style: TextStyle(
+                                    fontWeight: FontWeight.bold,
+                                    color: Colors.green.shade700,
+                                  ),
+                                ),
+                              ],
+                            ),
                             trailing: ElevatedButton(
                               onPressed: () {
                                 joinRoom(room['_id'], widget.kullaniciAdi);

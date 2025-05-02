@@ -88,6 +88,17 @@ class _GameScreenState extends State<GameScreen> {
     });
   }
 
+  final Map<String, int> letterPoints = {
+    'A': 1, 'B': 3, 'C': 4, 'Ç': 4, 'D': 3, 'E': 1, 'F': 7,
+    'G': 5, 'Ğ': 8, 'H': 5, 'I': 2, 'İ': 1, 'J': 10, 'K': 1,
+    'L': 1, 'M': 2, 'N': 1, 'O': 2, 'Ö': 7, 'P': 5, 'R': 1,
+    'S': 2, 'Ş': 4, 'T': 1, 'U': 2, 'Ü': 3, 'V': 7, 'Y': 3, 'Z': 4,
+  };
+
+  int _getLetterPoint(String letter) {
+    return letterPoints[letter.toUpperCase()] ?? 0;
+  }
+
   Future<void> _loadDictionary() async {
     try {
       print("sözlük yükleniyor");
@@ -275,9 +286,22 @@ class _GameScreenState extends State<GameScreen> {
                     );
                   } else if (boardLetter.isNotEmpty) {
                     // If the square has a letter from the server state (already confirmed move)
-                    displayContent = Text(
-                      boardLetter,
-                      style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18), // Default text color (likely black)
+                    displayContent = Stack(
+                      children: [
+                        Center(
+                          child: Text(
+                            boardLetter,
+                            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18, color: Colors.black),
+                          ),
+                        ),
+                        Align(
+                          alignment: const Alignment(0.9, -1),
+                          child: Text(
+                            _getLetterPoint(boardLetter).toString(),
+                            style: const TextStyle(fontSize: 8, fontWeight: FontWeight.bold, color: Colors.black87),
+                          ),
+                        ),
+                      ],
                     );
                   }
                    else {
@@ -339,7 +363,25 @@ class _GameScreenState extends State<GameScreen> {
                             color: currentBackgroundColor,
                           ),
                           child: Center(
-                            child: displayContent,
+                            child: _temporaryPlacedTiles.containsKey((row, col))
+                                ? Stack(
+                                    children: [
+                                      Center(
+                                        child: Text(
+                                          _temporaryPlacedTiles[(row, col)]!,
+                                          style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.black),
+                                        ),
+                                      ),
+                                      Align(
+                                        alignment: const Alignment(0.9, -1),
+                                        child: Text(
+                                          _getLetterPoint(_temporaryPlacedTiles[(row, col)]!).toString(),
+                                          style: const TextStyle(fontSize: 8, fontWeight: FontWeight.bold, color: Colors.black87),
+                                        ),
+                                      ),
+                                    ],
+                                  )
+                                : displayContent, // normal hücreler için olduğu gibi
                           ),
                         ),
                       );
@@ -435,12 +477,23 @@ class _GameScreenState extends State<GameScreen> {
                           borderRadius: BorderRadius.circular(8),
                           boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.3), blurRadius: 5)] // Keep shadow
                         ),
-                        child: Center(
-                          child: Text(
-                            letter,
-                            style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: Colors.black), // Ensure text color is black
+                        child: Stack(
+                        children: [
+                          Center(
+                            child: Text(
+                              letter,
+                              style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.black),
+                            ),
                           ),
-                        ),
+                          Align(
+                          alignment: const Alignment(0.9, -1),
+                            child: Text(
+                              _getLetterPoint(letter).toString(), // Bu fonksiyon harf puanını döndürmeli
+                              style: const TextStyle(fontSize: 8, fontWeight: FontWeight.bold, color: Colors.black87),
+                            ),
+                          ),
+                        ],
+                      ),
                       ),
                     ),
                     childWhenDragging: Container( // Placeholder when dragging
@@ -461,11 +514,22 @@ class _GameScreenState extends State<GameScreen> {
                         borderRadius: BorderRadius.circular(8),
                          boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.2), blurRadius: 2, offset: Offset(1,1))]
                       ),
-                      child: Center(
-                        child: Text(
-                          letter,
-                          style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.black),
-                        ),
+                      child: Stack(
+                        children: [
+                          Center(
+                            child: Text(
+                              letter,
+                              style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.black),
+                            ),
+                          ),
+                          Align(
+                          alignment: const Alignment(0.9, -1),
+                            child: Text(
+                              _getLetterPoint(letter).toString(), // Bu fonksiyon harf puanını döndürmeli
+                              style: const TextStyle(fontSize: 8, fontWeight: FontWeight.bold, color: Colors.black87),
+                            ),
+                          ),
+                        ],
                       ),
                     ),
                   );
