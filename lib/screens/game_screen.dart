@@ -55,6 +55,7 @@ class _GameScreenState extends State<GameScreen> {
   // true = part of valid word(s), false = part of invalid word(s), null = not checked yet or not part of a word
   Map<(int, int), bool?> _tileValidationStatus = {};
   int _potentialScore = 0; // Score for the current temporary placement
+  bool _isValidMove = false;
 
   @override
   void initState() {
@@ -302,13 +303,29 @@ class _GameScreenState extends State<GameScreen> {
                         }
                       }
 
-                      return Container(
-                        decoration: BoxDecoration(
-                          border: border, // Use the determined border
-                          color: currentBackgroundColor, // Use the determined background color
-                        ),
-                        child: Center(
-                          child: displayContent, // Shows placed letter (black), board letter, or tile type
+                      return GestureDetector(
+                        onTap: () {
+                          // Eğer buraya geçici taş konduysa, geri al
+                          if (_temporaryPlacedTiles.containsKey((row, col))) {
+                            setState(() {
+                              _usedRackIndices.removeWhere((i) =>
+                                myPlayer['rack'][i] == _temporaryPlacedTiles[(row, col)]); // taş geri döner
+                              _temporaryPlacedTiles.remove((row, col));
+                              _tileValidationStatus.remove((row, col));
+                              _potentialScore = 0;
+                              _isValidMove = false;
+                              _validateAndScoreMove(boardState);
+                            });
+                          }
+                        },
+                        child: Container(
+                          decoration: BoxDecoration(
+                            border: border,
+                            color: currentBackgroundColor,
+                          ),
+                          child: Center(
+                            child: displayContent,
+                          ),
                         ),
                       );
                     },
@@ -411,43 +428,34 @@ class _GameScreenState extends State<GameScreen> {
           ),
           if (isMyTurn)
             ElevatedButton(
-              onPressed: () {
-                // TODO: Implement the logic to send placed tiles to the server
-                print("Hamleyi Onayla tıklandı!");
-                print("Yerleştirilen Taşlar: $_temporaryPlacedTiles");
+              onPressed: (_isValidMove && _temporaryPlacedTiles.isNotEmpty)
+                  ? () {
+                      print("Hamleyi Onayla tıklandı!");
+                      print("Yerleştirilen Taşlar: $_temporaryPlacedTiles");
 
-                if (_temporaryPlacedTiles.isNotEmpty) {
-                   final socket = SocketClient.instance.socket!;
-                   // Prepare data for the server
-                   List<Map<String, dynamic>> placedTilesData = _temporaryPlacedTiles.entries.map((entry) {
-                     return {
-                       'letter': entry.value,
-                       'row': entry.key.$1, // Using record syntax .$1 for row
-                       'col': entry.key.$2, // Using record syntax .$2 for col
-                     };
-                   }).toList();
+                      final socket = SocketClient.instance.socket!;
+                      List<Map<String, dynamic>> placedTilesData = _temporaryPlacedTiles.entries.map((entry) {
+                        return {
+                          'letter': entry.value,
+                          'row': entry.key.$1,
+                          'col': entry.key.$2,
+                        };
+                      }).toList();
 
-                   socket.emit('placeWord', {
-                     'roomId': roomData['_id'],
-                     'nickname': widget.kullaniciAdi, // Send nickname
-                     'placedTiles': placedTilesData,
-                   });
+                      socket.emit('placeWord', {
+                        'roomId': roomData['_id'],
+                        'nickname': widget.kullaniciAdi,
+                        'placedTiles': placedTilesData,
+                      });
 
-                   // Clear temporary placements after sending
-                   // Clear temporary placements AND used indices after sending
-                   setState(() {
-                     _temporaryPlacedTiles.clear();
-                     _usedRackIndices.clear();
-                     _tileValidationStatus.clear(); // Clear validation on submit
-                     _potentialScore = 0; // Reset score on submit
-                   });
-               } else {
-                 // Show a message that no tiles were placed
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Tahta üzerine hiç taş yerleştirmediniz.')),
-                  );
-                }
-              },
+                      setState(() {
+                        _temporaryPlacedTiles.clear();
+                        _usedRackIndices.clear();
+                        _tileValidationStatus.clear();
+                        _potentialScore = 0;
+                      });
+                    }
+                  : null, // buton devre dışı
               child: const Text('Hamleyi Onayla'),
             ),
           // Display potential score
@@ -734,6 +742,8 @@ class _GameScreenState extends State<GameScreen> {
 
     // --- 4. Update UI State ---
     setState(() {
+      _isValidMove = allWordsValid; // Update valid move status
+
       if (allWordsValid) {
         _potentialScore = totalScore;
         // Mark all temporarily placed tiles as valid

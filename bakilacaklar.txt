@@ -1,14 +1,12 @@
 !!!!puan hesaplarken tek bir yöne bakıyor dikey ve yatay kontrol sağlanmalı -> kontrol lazim
 
 CUMA
--pas
--- eğer hamle yanlışsa oynanamasın
---taş geri alınabilsin hamle onaylanmadan
+-- pas
 -- ekran puan eklenmesi - zaten hesaplıyor
 
 
---nar'daki n'yi de alsın
--- border çevresine skor -> potansiyal skor zaten var(h3'ü kontrol et)????
+-- nar'daki n'yi de alsın
+-- border çevresine skor -> potansiyal skor zaten var
 
 VEYA 
 
