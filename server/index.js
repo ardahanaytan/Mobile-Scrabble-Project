@@ -223,8 +223,6 @@ io.on('connection', (socket) => {
             }
           }
         });
-        
-        
 
         placedTiles.forEach(tile => {
           const letterIndex = player.rack.indexOf(tile.letter);
@@ -247,6 +245,7 @@ io.on('connection', (socket) => {
         room.markModified('players');
         // --- End Update Player Rack & Points ---
 
+        room.consecutivePasses = 0;
 
         // --- Advance Turn ---
         room.turnIndex = (room.turnIndex + 1) % room.players.length;
@@ -273,41 +272,48 @@ io.on('connection', (socket) => {
 
     socket.on('passTurn', async ({ roomId, nickname }) => {
       console.log(`passTurn event received from ${nickname} in room ${roomId}`);
-    
+
       try {
         const room = await Room.findById(roomId);
-    
         if (!room) {
           console.error(`passTurn Error: Room ${roomId} not found.`);
           return;
         }
-    
+
         const playerIndex = room.players.findIndex(p => p.nickname === nickname);
-        if (playerIndex === -1) {
-          console.error(`passTurn Error: Player ${nickname} not found in room ${roomId}.`);
-          return;
-        }
-    
-        // Check if it's the player's turn
-        if (room.turnIndex !== playerIndex) {
+        if (playerIndex === -1 || room.turnIndex !== playerIndex) {
           console.warn(`passTurn Warning: It's not ${nickname}'s turn in room ${roomId}.`);
           return;
         }
-    
-        // Sırayı değiştir (sadece bu kadar!)
-        room.turnIndex = (room.turnIndex + 1) % room.players.length;
-        room.lastMoveTime = new Date(); // süreyi sıfırla
-    
+
+        // ✅ Pas sayısını artır
+        room.consecutivePasses = (room.consecutivePasses || 0) + 1;
+
+        if (room.consecutivePasses >= 2) {
+          room.isGameOver = true;
+          const sorted = [...room.players].sort((a, b) => b.points - a.points);
+          const highestScore = sorted[0].points;
+
+          // Eğer eşitlik varsa ilk olan kazanır (istersen eşitliği de kontrol edebiliriz)
+          const winnerPlayer = sorted.find(p => p.points === highestScore);
+          room.winner = winnerPlayer?.nickname || null;
+
+          console.log(`🛑 Game over in room ${roomId} due to 2 consecutive passes.`);
+          console.log(`🏆 Winner: ${room.winner}`);
+          console.log(`🛑 Game over in room ${roomId} due to 2 consecutive passes.`);
+        } else {
+          room.turnIndex = (room.turnIndex + 1) % room.players.length;
+          room.lastMoveTime = new Date();
+        }
+
         await room.save();
-    
-        // Herkese yeni oda verisini gönder
         io.to(roomId).emit('updateRoom', room);
-        console.log(`passTurn Success: ${nickname} passed their turn. Turn advanced.`);
-    
+
       } catch (err) {
         console.error(`passTurn Error:`, err);
       }
     });
+
     
 
 
