@@ -36,6 +36,8 @@ const drawLettersFromBag = (letterBag, count) => {
 };
 
 let waitingPlayer = null;
+const turnTimers = new Map(); // roomId -> timeout
+
 
 // Placeholder for move validation logic
 // TODO: Implement actual Scrabble word validation rules
@@ -129,7 +131,11 @@ io.on('connection', (socket) => {
           socket.emit('joinRoomSuccess', room);
       
           // Odaya zaten bağlı olan diğer oyunculara da updateRoom gönderelim
-          socket.to(roomId).emit('updateRoom', room);
+          io.to(roomId).emit('updateRoom', {
+            ...room.toObject(),
+            letterBagCount: room.letterBag.length,
+          });
+          
       
         } catch (err) {
           console.error('joinRoom hatası:', err);
@@ -224,18 +230,6 @@ io.on('connection', (socket) => {
           }
         });
 
-        placedTiles.forEach(tile => {
-          const letterIndex = player.rack.indexOf(tile.letter);
-          if (letterIndex !== -1) {
-            player.rack.splice(letterIndex, 1);
-            lettersUsedCount++;
-          } else {
-            // Handle potential cheating or errors (player didn't have the tile)
-            console.error(`placeWord Error: Player ${nickname} in room ${roomId} did not have tile ${tile.letter}.`);
-            // Decide how to handle this - revert move? penalize?
-          }
-        });
-
         // Draw new letters
         const lettersToDraw = Math.min(lettersUsedCount, room.letterBag.length);
         const newLetters = drawLettersFromBag(room.letterBag, lettersToDraw);
@@ -260,8 +254,13 @@ io.on('connection', (socket) => {
         await room.save();
 
         // Broadcast updated room state to all players in the room
-        io.to(roomId).emit('updateRoom', room);
+        io.to(roomId).emit('updateRoom', {
+          ...room.toObject(),
+          letterBagCount: room.letterBag.length,
+        });        
         console.log(`placeWord Success: Move by ${nickname} processed in room ${roomId}. Turn advanced.`);
+
+        updateTurnTimer(room);
 
       } catch (err) {
         console.error(`placeWord Error processing move in room ${roomId} for ${nickname}:`, err);
@@ -307,18 +306,88 @@ io.on('connection', (socket) => {
         }
 
         await room.save();
-        io.to(roomId).emit('updateRoom', room);
+        io.to(roomId).emit('updateRoom', {
+          ...room.toObject(),
+          letterBagCount: room.letterBag.length,
+        });
+        
+
+        updateTurnTimer(room);
 
       } catch (err) {
         console.error(`passTurn Error:`, err);
       }
     });
 
+    socket.on('surrender', async ({ roomId, nickname }) => {
+      console.log(`⚠️ ${nickname} surrendered in room ${roomId}`);
+      try {
+        const room = await Room.findById(roomId);
+        if (!room || room.isGameOver) return;
     
+        const playerIndex = room.players.findIndex(p => p.nickname === nickname);
+        if (playerIndex === -1) return;
+    
+        // 🎯 Kazanan rakip
+        const opponent = room.players.find(p => p.nickname !== nickname);
+        room.winner = opponent?.nickname || null;
+        room.isGameOver = true;
+    
+        await room.save();
+        io.to(roomId).emit('updateRoom', {
+          ...room.toObject(),
+          letterBagCount: room.letterBag.length,
+        });
+        
 
+        turnTimers.delete(room._id.toString());
+
+      } catch (err) {
+        console.error(`surrender error in room ${roomId}:`, err);
+      }
+    });
+
+    
 
     // Diğer eventler...
 });
+
+function updateTurnTimer(room) {
+  const roomId = room._id.toString();
+
+  // Önceki zamanlayıcıyı temizle
+  if (turnTimers.has(roomId)) {
+    clearTimeout(turnTimers.get(roomId));
+  }
+
+  const timeout = setTimeout(async () => {
+    try {
+      const updatedRoom = await Room.findById(roomId);
+      if (!updatedRoom || updatedRoom.isGameOver) return;
+
+      const loser = updatedRoom.players[updatedRoom.turnIndex];
+      const winner = updatedRoom.players.find(p => p.nickname !== loser.nickname);
+
+      updatedRoom.isGameOver = true;
+      updatedRoom.winner = winner?.nickname || null;
+
+      console.log(`⏱ Oyuncu süresini doldurdu ve kaybetti: ${loser.nickname}`);
+      console.log(`🏆 Kazanan: ${updatedRoom.winner}`);
+
+      await updatedRoom.save();
+      io.to(roomId).emit('updateRoom', {
+        ...room.toObject(),
+        letterBagCount: room.letterBag.length,
+      });
+      
+
+    } catch (err) {
+      console.error('❌ Zaman dolumu hatası:', err);
+    }
+  }, room.turnTimeLimit * 1000); // saniyeyi milisaniyeye çevir
+
+  turnTimers.set(roomId, timeout);
+}
 
 
 server.listen(port, "0.0.0.0", () => {

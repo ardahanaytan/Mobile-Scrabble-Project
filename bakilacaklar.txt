@@ -5,20 +5,20 @@ CUMA
 
 VEYA 
 
--- süre bitme, taş bitme senaryosu ile oyun bitiş kısmı bastırma;
+-- taş bitme senaryosu ile oyun bitiş kısmı bastırma;   !!!!!!!EN SON BAKILACAKKKKK!!!!!!!!!!
 -- harf kalmayınca oyun biter. Elinde harf kalan oyuncunun
 harflerin puanlarının toplamı taşlarını önce bitiren oyuncuya eklenirken aynı zamanda
-elinde harf kalan oyuncudan ceza puanı olarak düşülür. 
--- teslim olma -> oyun sonu ekranı yapılırken ayarlanabilir
+elinde harf kalan oyuncudan ceza puanı olarak düşülür.  !!!!!!!EN SON BAKILACAKKKKK!!!!!!!!!!
 
 CUMARTESİ 
 
+--turkish harfler bi bozuk çalışıyo ona bak.
 --üstteki veyadan kalanlar
 --üsttekilerden VARSA(OLMASIN) eksikler
 
---biten oyunlar sekmesi
-
 --mayınlar, ödüller
+
+--gamescreen kalan harf sayısı
 
 ?? taşıma olayı 
 Sıra kendinde olan kullanıcı kelime yazmak yerine oyun tahtasında yer alan harflerden

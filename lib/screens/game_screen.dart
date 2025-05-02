@@ -124,6 +124,7 @@ class _GameScreenState extends State<GameScreen> {
 
   void calculateRemainingTime() {
     final roomData = Provider.of<RoomDataProvider>(context, listen: false).roomData;
+    
     if (roomData.isEmpty || roomData['lastMoveTime'] == null || roomData['turnTimeLimit'] == null) return;
 
     final lastMoveTime = DateTime.parse(roomData['lastMoveTime']);
@@ -151,6 +152,7 @@ class _GameScreenState extends State<GameScreen> {
   @override
   Widget build(BuildContext context) {
     final roomData = Provider.of<RoomDataProvider>(context).roomData;
+    final kalanTas = roomData['letterBag'].length ?? 0;
 
     if (roomData['isGameOver'] == true) {
       final kazanan = roomData['players']
@@ -234,6 +236,10 @@ class _GameScreenState extends State<GameScreen> {
                 );
               }).toList(),
             ),
+          ),
+          Text(
+            'Kalan Taş: $kalanTas',
+            style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
           ),
           const SizedBox(height: 10),
           Text(
@@ -598,26 +604,46 @@ class _GameScreenState extends State<GameScreen> {
                   child: const Text('Hamleyi Onayla'),
                 ),
                 const SizedBox(height: 10),
-                ElevatedButton(
-                  onPressed: () {
-                    final socket = SocketClient.instance.socket!;
-                    print("Pas geçildi.");
-                    socket.emit('passTurn', {
-                      'roomId': roomData['_id'],
-                      'nickname': widget.kullaniciAdi,
-                    });
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                  children: [
+                    Expanded(
+                      child: ElevatedButton(
+                        onPressed: () {
+                          final socket = SocketClient.instance.socket!;
+                          print("Pas geçildi.");
+                          socket.emit('passTurn', {
+                            'roomId': roomData['_id'],
+                            'nickname': widget.kullaniciAdi,
+                          });
 
-                    setState(() {
-                      _temporaryPlacedTiles.clear();
-                      _usedRackIndices.clear();
-                      _tileValidationStatus.clear();
-                      _potentialScore = 0;
-                      _isValidMove = false;
-
-                    });
-                  },
-                  style: ElevatedButton.styleFrom(backgroundColor: Colors.grey),
-                  child: const Text('PAS', style: TextStyle(color: Colors.white)),
+                          setState(() {
+                            _temporaryPlacedTiles.clear();
+                            _usedRackIndices.clear();
+                            _tileValidationStatus.clear();
+                            _potentialScore = 0;
+                            _isValidMove = false;
+                          });
+                        },
+                        style: ElevatedButton.styleFrom(backgroundColor: Colors.grey),
+                        child: const Text('PAS', style: TextStyle(color: Colors.white)),
+                      ),
+                    ),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: ElevatedButton(
+                        onPressed: () {
+                          final socket = SocketClient.instance.socket!;
+                          socket.emit('surrender', {
+                            'roomId': roomData['_id'],
+                            'nickname': widget.kullaniciAdi,
+                          });
+                        },
+                        style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+                        child: const Text('Teslim Ol', style: TextStyle(color: Colors.white)),
+                      ),
+                    ),
+                  ],
                 ),
               ],
             ),
