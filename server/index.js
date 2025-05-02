@@ -137,7 +137,7 @@ io.on('connection', (socket) => {
     });
 
 
-    socket.on('placeWord', async ({ roomId, nickname, placedTiles }) => {
+    socket.on('placeWord', async ({ roomId, nickname, placedTiles, score }) => {
       console.log(`placeWord event received from ${nickname} for room ${roomId}`, placedTiles);
       try {
         const room = await Room.findById(roomId);
@@ -193,6 +193,7 @@ io.on('connection', (socket) => {
              console.warn(`placeWord Warning: Invalid tile coordinates (${tile.row}, ${tile.col}) received for room ${roomId}`);
           }
         });
+
         // Mark boardState as modified for Mongoose
         room.markModified('boardState');
         // --- End Update Board State ---
@@ -200,8 +201,30 @@ io.on('connection', (socket) => {
 
         // --- Update Player Rack & Points (Placeholders) ---
         const player = room.players[playerIndex];
-        let pointsEarned = 0; // TODO: Calculate actual points
+        let pointsEarned = score; // TODO: Calculate actual points
         let lettersUsedCount = 0;
+
+        placedTiles.forEach(tile => {
+          if (tile.isJoker) {
+            const jokerIndex = player.rack.indexOf(' '); // joker varsa
+            if (jokerIndex !== -1) {
+              player.rack.splice(jokerIndex, 1);         // ✅ doğru şekilde jokeri sil
+              lettersUsedCount++;
+            } else {
+              console.warn(`Joker harfi silinemedi – elde joker yok`);
+            }
+          } else {
+            const index = player.rack.indexOf(tile.letter);
+            if (index !== -1) {
+              player.rack.splice(index, 1);
+              lettersUsedCount++;
+            } else {
+              console.warn(`placeWord Error: Player ${nickname} did not have tile ${tile.letter}.`);
+            }
+          }
+        });
+        
+        
 
         placedTiles.forEach(tile => {
           const letterIndex = player.rack.indexOf(tile.letter);
@@ -247,6 +270,45 @@ io.on('connection', (socket) => {
         // socket.emit('gameError', { message: 'Hamle işlenirken bir sunucu hatası oluştu.' });
       }
     });
+
+    socket.on('passTurn', async ({ roomId, nickname }) => {
+      console.log(`passTurn event received from ${nickname} in room ${roomId}`);
+    
+      try {
+        const room = await Room.findById(roomId);
+    
+        if (!room) {
+          console.error(`passTurn Error: Room ${roomId} not found.`);
+          return;
+        }
+    
+        const playerIndex = room.players.findIndex(p => p.nickname === nickname);
+        if (playerIndex === -1) {
+          console.error(`passTurn Error: Player ${nickname} not found in room ${roomId}.`);
+          return;
+        }
+    
+        // Check if it's the player's turn
+        if (room.turnIndex !== playerIndex) {
+          console.warn(`passTurn Warning: It's not ${nickname}'s turn in room ${roomId}.`);
+          return;
+        }
+    
+        // Sırayı değiştir (sadece bu kadar!)
+        room.turnIndex = (room.turnIndex + 1) % room.players.length;
+        room.lastMoveTime = new Date(); // süreyi sıfırla
+    
+        await room.save();
+    
+        // Herkese yeni oda verisini gönder
+        io.to(roomId).emit('updateRoom', room);
+        console.log(`passTurn Success: ${nickname} passed their turn. Turn advanced.`);
+    
+      } catch (err) {
+        console.error(`passTurn Error:`, err);
+      }
+    });
+    
 
 
     // Diğer eventler...

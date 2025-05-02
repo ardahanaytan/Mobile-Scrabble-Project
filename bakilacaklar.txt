@@ -1,22 +1,18 @@
-!!!!puan hesaplarken tek bir yöne bakıyor dikey ve yatay kontrol sağlanmalı -> kontrol lazim
-
 CUMA
--- pas
--- ekran puan eklenmesi - zaten hesaplıyor
 
-
--- nar'daki n'yi de alsın
--- border çevresine skor -> potansiyal skor zaten var
+-- nar'daki n'yi de alsın  !!!!!!ERTELENDİİİİİİİ!!!!!!!
+-- border çevresine skor -> potansiyal skor zaten var EN SON ZAMAN BULURSAK BAKCAZ
 
 VEYA 
 
---süre bitme, taş bitme senaryosu ile oyun bitiş kısmı bastırma;
-- harf kalmayınca oyun biter. Elinde harf kalan oyuncunun
+-- taşların içinde puan gözükcek.
+-- süre bitme, taş bitme senaryosu ile oyun bitiş kısmı bastırma;
+-- harf kalmayınca oyun biter. Elinde harf kalan oyuncunun
 harflerin puanlarının toplamı taşlarını önce bitiren oyuncuya eklenirken aynı zamanda
 elinde harf kalan oyuncudan ceza puanı olarak düşülür. 
-- arka arkaya 2 kez pas geçilir ise oyun otomatik olarak biter, elde kalan harflere
+-- arka arkaya 2 kez pas geçilir ise oyun otomatik olarak biter, elde kalan harflere
 bakılmaksızın puanı fazla olan oyuncu galip sayılır
--teslim olma -> oyun sonu ekranı yapılırken ayarlanabilir
+-- teslim olma -> oyun sonu ekranı yapılırken ayarlanabilir
 
 CUMARTESİ 
 

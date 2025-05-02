@@ -56,6 +56,11 @@ class _GameScreenState extends State<GameScreen> {
   Map<(int, int), bool?> _tileValidationStatus = {};
   int _potentialScore = 0; // Score for the current temporary placement
   bool _isValidMove = false;
+  Set<(int, int)> _jokerTileCoords = {};
+  bool isTurkishLetter(String value) {
+    final turkishRegex = RegExp(r'^[a-zA-ZçğıöşüÇĞİÖŞÜ]$');
+    return turkishRegex.hasMatch(value);
+  }
 
   @override
   void initState() {
@@ -311,6 +316,16 @@ class _GameScreenState extends State<GameScreen> {
                               _usedRackIndices.removeWhere((i) =>
                                 myPlayer['rack'][i] == _temporaryPlacedTiles[(row, col)]); // taş geri döner
                               _temporaryPlacedTiles.remove((row, col));
+                              _jokerTileCoords.remove((row, col));
+
+                              final int? indexToRemove = _usedRackIndices.firstWhere(
+                                (index) => myPlayer['rack'][index] == '*' || myPlayer['rack'][index] == ' ',
+                                orElse: () => -1,
+                              );
+                              if (indexToRemove != -1) {
+                                _usedRackIndices.remove(indexToRemove);
+                              }
+
                               _tileValidationStatus.remove((row, col));
                               _potentialScore = 0;
                               _isValidMove = false;
@@ -334,12 +349,44 @@ class _GameScreenState extends State<GameScreen> {
                       // and the data is the expected type (Map)
                       return data != null && boardLetter.isEmpty && placedLetter == null;
                     },
-                    onAccept: (data) {
-                      // data is {'letter': String, 'rackIndex': int}
+                    onAccept: (data) async {
+                      String placedLetter = data['letter']!;
+
+                      if (placedLetter == ' ') {
+                        final controller = TextEditingController();
+
+                        String? chosen = await showDialog(
+                          context: context,
+                          builder: (context) {
+                            return AlertDialog(
+                              title: const Text('Joker Harf Seç'),
+                              content: TextField(
+                                controller: controller,
+                                maxLength: 1,
+                                textCapitalization: TextCapitalization.characters,
+                                decoration: const InputDecoration(hintText: 'Bir harf gir'),
+                              ),
+                              actions: [
+                                TextButton(
+                                  onPressed: () {
+                                    Navigator.of(context).pop(controller.text.toUpperCase());
+                                  },
+                                  child: const Text('Tamam'),
+                                ),
+                              ],
+                            );
+                          },
+                        );
+
+                        if (chosen == null || chosen.isEmpty || chosen.length != 1 || !isTurkishLetter(chosen)) return;
+
+                        placedLetter = chosen;
+                        _jokerTileCoords.add((row, col));
+                      }
+
                       setState(() {
-                        _temporaryPlacedTiles[(row, col)] = data['letter']!;
+                        _temporaryPlacedTiles[(row, col)] = placedLetter;
                         _usedRackIndices.add(data['rackIndex']!);
-                        // Trigger validation and scoring after a tile is placed
                         _validateAndScoreMove(boardState);
                       });
                     },
@@ -427,36 +474,67 @@ class _GameScreenState extends State<GameScreen> {
             ),
           ),
           if (isMyTurn)
-            ElevatedButton(
-              onPressed: (_isValidMove && _temporaryPlacedTiles.isNotEmpty)
-                  ? () {
-                      print("Hamleyi Onayla tıklandı!");
-                      print("Yerleştirilen Taşlar: $_temporaryPlacedTiles");
+            Column(
+              children: [
+                ElevatedButton(
+                  onPressed: (_isValidMove && _temporaryPlacedTiles.isNotEmpty)
+                      ? () {
+                          print("Hamleyi Onayla tıklandı!");
+                          print("Yerleştirilen Taşlar: $_temporaryPlacedTiles");
 
-                      final socket = SocketClient.instance.socket!;
-                      List<Map<String, dynamic>> placedTilesData = _temporaryPlacedTiles.entries.map((entry) {
-                        return {
-                          'letter': entry.value,
-                          'row': entry.key.$1,
-                          'col': entry.key.$2,
-                        };
-                      }).toList();
+                          final socket = SocketClient.instance.socket!;
+                          List<Map<String, dynamic>> placedTilesData = _temporaryPlacedTiles.entries.map((entry) {
+                            bool isJoker = _jokerTileCoords.contains(entry.key);
+                            return {
+                              'letter': entry.value,
+                              'row': entry.key.$1,
+                              'col': entry.key.$2,
+                              'isJoker': isJoker,
+                            };
+                          }).toList();
 
-                      socket.emit('placeWord', {
-                        'roomId': roomData['_id'],
-                        'nickname': widget.kullaniciAdi,
-                        'placedTiles': placedTilesData,
-                      });
+                          socket.emit('placeWord', {
+                            'roomId': roomData['_id'],
+                            'nickname': widget.kullaniciAdi,
+                            'placedTiles': placedTilesData,
+                            'score': _potentialScore,
+                          });
 
-                      setState(() {
-                        _temporaryPlacedTiles.clear();
-                        _usedRackIndices.clear();
-                        _tileValidationStatus.clear();
-                        _potentialScore = 0;
-                      });
-                    }
-                  : null, // buton devre dışı
-              child: const Text('Hamleyi Onayla'),
+                          setState(() {
+                            _temporaryPlacedTiles.clear();
+                            _usedRackIndices.clear();
+                            _tileValidationStatus.clear();
+                            _potentialScore = 0;
+                            _isValidMove = false;
+                            _jokerTileCoords.clear();
+                          });
+                        }
+                      : null,
+                  child: const Text('Hamleyi Onayla'),
+                ),
+                const SizedBox(height: 10),
+                ElevatedButton(
+                  onPressed: () {
+                    final socket = SocketClient.instance.socket!;
+                    print("Pas geçildi.");
+                    socket.emit('passTurn', {
+                      'roomId': roomData['_id'],
+                      'nickname': widget.kullaniciAdi,
+                    });
+
+                    setState(() {
+                      _temporaryPlacedTiles.clear();
+                      _usedRackIndices.clear();
+                      _tileValidationStatus.clear();
+                      _potentialScore = 0;
+                      _isValidMove = false;
+
+                    });
+                  },
+                  style: ElevatedButton.styleFrom(backgroundColor: Colors.grey),
+                  child: const Text('PAS', style: TextStyle(color: Colors.white)),
+                ),
+              ],
             ),
           // Display potential score
           if (_potentialScore > 0)
@@ -723,6 +801,10 @@ class _GameScreenState extends State<GameScreen> {
           String letter = _toUpperCaseTurkish(getLetter(r, c));
           int letterScore = letterPoints[letter] ?? 0;
           String tileType = tileTypes[r][c];
+
+          if (_jokerTileCoords.contains((r, c))) {
+            letterScore = 0; // joker taşlar 0 puan
+          }
 
           // Apply bonuses only if the tile was placed this turn
           if (_temporaryPlacedTiles.containsKey(coord)) {
