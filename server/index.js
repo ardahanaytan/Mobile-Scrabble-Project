@@ -494,4 +494,25 @@ app.get('/api/active-rooms', async (req, res) => {
         res.status(500).json({ message: 'Aktif odalar çekilemedi.' });
     }
 });
+
+app.get('/api/finished-rooms', async (req, res) => {
+  try{
+    const nickname = req.query.nickname;
+
+    if (!nickname) {
+      return res.status(400).json({ message: "nickname gerekli" });
+    }
+
+    const rooms = await Room.find({
+      isGameOver: true,
+      players: { $elemMatch: { nickname: nickname } }
+    });
+    res.status(200).json(rooms);
+  }
+  catch (err) {
+    console.error(err);
+    res.status(500).json({ message: 'Biten odalar çekilemedi.' });
+  }
+});
+
   
