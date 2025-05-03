@@ -56,6 +56,7 @@ class _GameScreenState extends State<GameScreen> {
   // true = part of valid word(s), false = part of invalid word(s), null = not checked yet or not part of a word
   Map<(int, int), bool?> _tileValidationStatus = {};
   int _potentialScore = 0; // Score for the current temporary placement
+  int _normalScore = 0; // Score for the current normal placement
   bool _isValidMove = false;
   Set<(int, int)> _jokerTileCoords = {};
   bool isTurkishLetter(String value) {
@@ -83,6 +84,7 @@ class _GameScreenState extends State<GameScreen> {
           _usedRackIndices.clear();
           _tileValidationStatus.clear(); // Clear validation status on update
           _potentialScore = 0; // Reset potential score
+          _normalScore = 0; // Reset normal score
         });
         Provider.of<RoomDataProvider>(context, listen: false).updateRoomData(updatedRoom);
       }
@@ -379,6 +381,7 @@ class _GameScreenState extends State<GameScreen> {
 
                               _tileValidationStatus.remove((row, col));
                               _potentialScore = 0;
+                              _normalScore = 0;
                               _isValidMove = false;
                               _validateAndScoreMove(boardState);
                             });
@@ -588,6 +591,7 @@ class _GameScreenState extends State<GameScreen> {
                             'roomId': roomData['_id'],
                             'nickname': widget.kullaniciAdi,
                             'placedTiles': placedTilesData,
+                            'normalScore': _normalScore,
                             'score': _potentialScore,
                           });
 
@@ -596,6 +600,7 @@ class _GameScreenState extends State<GameScreen> {
                             _usedRackIndices.clear();
                             _tileValidationStatus.clear();
                             _potentialScore = 0;
+                            _normalScore = 0;
                             _isValidMove = false;
                             _jokerTileCoords.clear();
                           });
@@ -622,6 +627,7 @@ class _GameScreenState extends State<GameScreen> {
                             _usedRackIndices.clear();
                             _tileValidationStatus.clear();
                             _potentialScore = 0;
+                            _normalScore = 0;
                             _isValidMove = false;
                           });
                         },
@@ -667,6 +673,7 @@ class _GameScreenState extends State<GameScreen> {
   void _validateAndScoreMove(List<List<String>> boardState) {
     _tileValidationStatus.clear(); // Clear previous validation
     _potentialScore = 0;
+    _normalScore = 0;
 
     if (_temporaryPlacedTiles.isEmpty) {
       setState(() {}); // Update UI if tiles were removed
@@ -919,7 +926,7 @@ class _GameScreenState extends State<GameScreen> {
           if (_jokerTileCoords.contains((r, c))) {
             letterScore = 0; // joker taşlar 0 puan
           }
-
+          _normalScore += letterScore;
           // Apply bonuses only if the tile was placed this turn
           if (_temporaryPlacedTiles.containsKey(coord)) {
             switch (tileType) {
@@ -954,11 +961,13 @@ class _GameScreenState extends State<GameScreen> {
          // If any part was invalid, reset score and mark all as invalid
          if (invalidWordCoords.isNotEmpty) {
              _potentialScore = 0;
+             _normalScore = 0;
              _markAllTemporaryTilesInvalid(updateState: false); // Already in setState
          }
 
       } else {
         _potentialScore = 0;
+        _normalScore = 0;
         // Mark tiles involved in invalid words as false, others as potentially true (if not involved)
          for (var coord in _temporaryPlacedTiles.keys) {
              if (invalidWordCoords.contains(coord)) {
@@ -1005,10 +1014,12 @@ class _GameScreenState extends State<GameScreen> {
         setState(() {
             _tileValidationStatus = newStatus;
             _potentialScore = 0;
+            _normalScore = 0;
         });
      } else {
          _tileValidationStatus = newStatus;
          _potentialScore = 0;
+         _normalScore = 0;
      }
   }
 

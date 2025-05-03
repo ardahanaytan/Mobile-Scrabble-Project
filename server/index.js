@@ -47,6 +47,61 @@ const validateMove = (boardState, placedTiles) => {
   return true;
 };
 
+function generateRandomPositions(count, occupied = new Set()) {
+  const positions = new Set();
+
+  while (positions.size < count) {
+    const row = Math.floor(Math.random() * 15);
+    const col = Math.floor(Math.random() * 15);
+    const key = `${row},${col}`;
+    if (!occupied.has(key)) {
+      positions.add(key);
+      occupied.add(key);
+    }
+  }
+
+  return Array.from(positions).map(p => p.split(',').map(Number));
+}
+
+function initializeSpecialTiles() {
+  const mineCounts = {
+    PUAN_BOLUNMESI: 5,
+    PUAN_TRANSFERI: 4,
+    HARF_KAYBI: 3,
+    EKSTRA_HAMLE_ENGELI: 2,
+    KELIME_IPTALI: 2,
+  };
+
+  const rewardCounts = {
+    BOLGE_YASAGI: 2,
+    HARF_YASAGI: 3,
+    EKSTRA_HAMLE_JOKERI: 2,
+  };
+
+  const mineMap = Array(15).fill(null).map(() => Array(15).fill(null));
+  const rewardMap = Array(15).fill(null).map(() => Array(15).fill(null));
+  const occupied = new Set();
+
+  // Mayınları yerleştir
+  for (const [type, count] of Object.entries(mineCounts)) {
+    const positions = generateRandomPositions(count, occupied);
+    for (const [row, col] of positions) {
+      mineMap[row][col] = `M_${type}`;
+    }
+  }
+
+  // Ödülleri yerleştir
+  for (const [type, count] of Object.entries(rewardCounts)) {
+    const positions = generateRandomPositions(count, occupied);
+    for (const [row, col] of positions) {
+      rewardMap[row][col] = `R_${type}`;
+    }
+  }
+
+  return { mineMap, rewardMap };
+}
+
+
 io.on('connection', (socket) => {
     console.log('✅ Yeni bağlantı:', socket.id);
 
@@ -69,6 +124,7 @@ io.on('connection', (socket) => {
         // Bekleyen biri var, eşleştir
         const room = new Room({
           roomName: `oda-${waitingPlayer.socket.id}-${socket.id}`,
+          ...initializeSpecialTiles()
         });
   
         player.rack = drawLettersFromBag(room.letterBag, 7);
@@ -143,7 +199,7 @@ io.on('connection', (socket) => {
     });
 
 
-    socket.on('placeWord', async ({ roomId, nickname, placedTiles, score }) => {
+    socket.on('placeWord', async ({ roomId, nickname, placedTiles, normalScore, score }) => {
       console.log(`placeWord event received from ${nickname} for room ${roomId}`, placedTiles);
       try {
         const room = await Room.findById(roomId);
@@ -227,6 +283,43 @@ io.on('connection', (socket) => {
             } else {
               console.warn(`placeWord Error: Player ${nickname} did not have tile ${tile.letter}.`);
             }
+          }
+        });
+
+        // 🔍 Yeni yerleştirilen taşlara bak: Ödül veya Ceza var mı?
+        placedTiles.forEach(tile => {
+          if (room.mineMap && room.mineMap[tile.row][tile.col]) {
+            console.log(`💣 ${tile.letter} harfi mayına denk geldi! Türü: ${room.mineMap[tile.row][tile.col]}`);
+            switch (room.mineMap[tile.row][tile.col]) {
+              case 'M_PUAN_BOLUNMESI':
+                pointsEarned = Math.floor(pointsEarned * 0.3);
+                break;
+              case 'M_PUAN_TRANSFERI':
+                const opponent = room.players.find(p => p.nickname !== nickname);
+                if (opponent) {
+                  opponent.points += pointsEarned;
+                  pointsEarned = 0; 
+                }
+                break;
+              case 'M_HARF_KAYBI':
+                const lostLetters = [...player.rack]; // elindeki tüm harfleri kaybeder
+                room.letterBag.push(...lostLetters);
+
+                player.rack = [];
+
+                lettersUsedCount = 7;
+                break;
+              case 'M_EKSTRA_HAMLE_ENGELI':
+                pointsEarned = normalScore;
+                break;
+              case 'M_KELIME_IPTALI':
+                pointsEarned = 0;
+                break;
+            }
+          }
+
+          if (room.rewardMap && room.rewardMap[tile.row][tile.col]) {
+            console.log(`🎁 ${tile.letter} harfi ödüle denk geldi! Türü: ${room.rewardMap[tile.row][tile.col]}`);
           }
         });
 

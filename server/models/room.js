@@ -65,6 +65,14 @@ const roomSchema = new mongoose.Schema({
     type: Number,
     default: 0
   },
+  mineMap: {
+    type: [[String]],
+    default: () => Array(15).fill(null).map(() => Array(15).fill(null)),
+  },
+  rewardMap: {
+    type: [[String]],
+    default: () => Array(15).fill(null).map(() => Array(15).fill(null)),
+  },
 }, { timestamps: true });
 
 module.exports = mongoose.model('Room', roomSchema);
