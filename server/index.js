@@ -459,16 +459,36 @@ app.post('/api/login', async (req, res) => {
     const { email, password } = req.body;
   
     const [email_control,] = await db.execute('SELECT * FROM kullanici WHERE email = ?', [email]);
+    const [nickname_control,] = await db.execute('SELECT kullaniciAdi FROM kullanici WHERE email = ?', [email]);
+    nickname = nickname_control[0].kullaniciAdi;
+
     if (email_control.length === 0 || email_control[0].password !== password) {
       return res.status(401).json({ message: 'Kullanıcı adı veya şifre yanlış' });
     }
+
+    try {
+      const Room = require('./models/room');
   
-    res.status(200).json({ 
-        message: 'Giriş başarılı.',
-        kullaniciAdi: email_control[0].kullaniciAdi,
-        kazanilanOyun: email_control[0].kazanilanOyun,
-        toplamOyun: email_control[0].toplamOyun
-    });
+      // Toplam oyun sayısı (bitmiş oyunlar ve kullanıcı oynamış)
+      const allGames = await Room.find({
+        isGameOver: true,
+        players: { $elemMatch: { nickname: nickname } }
+      });
+  
+      const totalGames = allGames.length;
+  
+      // Kazanılan oyun sayısı
+      const winCount = allGames.filter(room => room.winner === nickname).length;
+  
+      return res.status(200).json({
+        kullaniciAdi: nickname,
+        kazanilanOyun: winCount,
+        toplamOyun: totalGames,
+      });
+    } catch (err) {
+      console.error("❌ Kullanıcı istatistik hatası:", err);
+      res.status(500).json({ message: 'İstatistik alınamadı.' });
+    }
 });
   
 

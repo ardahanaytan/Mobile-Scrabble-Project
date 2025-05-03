@@ -263,7 +263,7 @@ class _GameScreenState extends State<GameScreen> {
                   // Check if a tile was temporarily placed here
                   String? placedLetter = _temporaryPlacedTiles[(row, col)];
                   String boardLetter = boardState[row][col]; // Original letter from server state
-                  String displayLetter = placedLetter ?? boardLetter; // Show placed tile if exists
+                  //String displayLetter = placedLetter ?? boardLetter; // Show placed tile if exists
                   String type = tileTypes[row][col];
 
                   Color backgroundColor;
@@ -894,7 +894,10 @@ class _GameScreenState extends State<GameScreen> {
 
     for (var wordData in wordsFound) {
       // Use Turkish uppercasing for dictionary check
+      print('Word found: ${wordData.word}');
       String word = _toUpperCaseTurkish(wordData.word);
+      print('checking word: $word');
+
       bool isValid = _validWords.contains(word);
       print("Checking word: ${wordData.word} ($word) -> Valid: $isValid");
 
@@ -986,15 +989,10 @@ class _GameScreenState extends State<GameScreen> {
       'û': 'U',
     };
 
-  String result = text.split('').map((char) {
-    final lowerChar = char.toLowerCase();
-    return turkishUpperMap.containsKey(lowerChar)
-        ? turkishUpperMap[lowerChar]!
-        : char.toUpperCase();
-  }).join();
-
-  return result;
-}
+    return text.split('').map((char) {
+      return turkishUpperMap[char] ?? char.toUpperCase();
+    }).join('');
+  }
 
 
   // Helper to mark all temporary tiles as invalid

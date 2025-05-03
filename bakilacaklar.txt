@@ -12,13 +12,7 @@ elinde harf kalan oyuncudan ceza puanı olarak düşülür.  !!!!!!!EN SON BAKIL
 
 CUMARTESİ 
 
---turkish harfler bi bozuk çalışıyo ona bak.
---üstteki veyadan kalanlar
---üsttekilerden VARSA(OLMASIN) eksikler
-
 --mayınlar, ödüller
-
---gamescreen kalan harf sayısı
 
 ?? taşıma olayı 
 Sıra kendinde olan kullanıcı kelime yazmak yerine oyun tahtasında yer alan harflerden
