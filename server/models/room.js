@@ -73,6 +73,12 @@ const roomSchema = new mongoose.Schema({
     type: [[String]],
     default: () => Array(15).fill(null).map(() => Array(15).fill(null)),
   },
+  activeZoneRestrictions: {
+    type: Map,
+    of: String, // Örnek: 'LEFT' ya da 'RIGHT'
+    default: {} // örn: { "deniyorum2": "LEFT" }
+  },
+
 }, { timestamps: true });
 
 module.exports = mongoose.model('Room', roomSchema);

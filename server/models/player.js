@@ -17,6 +17,11 @@ const playerSchema = new mongoose.Schema({
   rack: {
     type: [String], // Oyuncunun elindeki harfler
     default: [],
+  },
+  rewardInventory: {
+    type: Map,
+    of: Number,
+    default: {},
   }
 });
 

@@ -319,7 +319,13 @@ io.on('connection', (socket) => {
           }
 
           if (room.rewardMap && room.rewardMap[tile.row][tile.col]) {
-            console.log(`🎁 ${tile.letter} harfi ödüle denk geldi! Türü: ${room.rewardMap[tile.row][tile.col]}`);
+            const rewardType = room.rewardMap[tile.row][tile.col];
+            console.log(`🎁 ${tile.letter} harfi ödüle denk geldi! Türü: ${rewardType}`);
+
+            if (!player.rewardInventory) player.rewardInventory = {};
+            if (!player.rewardInventory[rewardType]) player.rewardInventory[rewardType] = 0;
+            player.rewardInventory[rewardType] += 1;
+            console.log('PLAYER REWARD INVENTORY: ', player.rewardInventory);
           }
         });
 
@@ -440,6 +446,26 @@ io.on('connection', (socket) => {
       }
     });
 
+    socket.on('useZoneBlock', async ({ roomId, nickname, restrictedSide }) => {
+      try {
+        const room = await Room.findById(roomId);
+        if (!room || room.isGameOver) return;
+    
+        const opponent = room.players.find(p => p.nickname !== nickname);
+        if (!opponent) return;
+    
+        // Rakibin adıyla yasak bölgeyi işaretle
+        room.activeZoneRestrictions.set(opponent.nickname, restrictedSide); // 'LEFT' ya da 'RIGHT'
+        await room.save();
+    
+        io.to(roomId).emit('updateRoom', {
+          ...room.toObject(),
+          letterBagCount: room.letterBag.length
+        });
+      } catch (err) {
+        console.error('useZoneBlock error:', err);
+      }
+    });
     
 
     // Diğer eventler...

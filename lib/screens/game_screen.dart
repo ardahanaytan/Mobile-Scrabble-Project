@@ -85,8 +85,28 @@ class _GameScreenState extends State<GameScreen> {
           _tileValidationStatus.clear(); // Clear validation status on update
           _potentialScore = 0; // Reset potential score
           _normalScore = 0; // Reset normal score
+
         });
         Provider.of<RoomDataProvider>(context, listen: false).updateRoomData(updatedRoom);
+      }
+      
+    });
+  
+    socket.on('zoneRestrictionError', (data) {
+      if (mounted) {
+        showDialog(
+          context: context,
+          builder: (context) => AlertDialog(
+            title: const Text('Bölge Yasağı!'),
+            content: Text(data['message'] ?? 'Yasaklı bölgeye hamle yapamazsınız.'),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(context).pop(),
+                child: const Text('Tamam'),
+              ),
+            ],
+          ),
+        );
       }
     });
   }
@@ -111,6 +131,7 @@ class _GameScreenState extends State<GameScreen> {
       // Use Turkish uppercasing for the dictionary
       final List<String> words = content.split('\n').map((word) => _toUpperCaseTurkish(word.trim())).where((word) => word.isNotEmpty).toList();
       setState(() {
+        
         _validWords = words.toSet();
         _dictionaryLoaded = true;
         print("Dictionary loaded successfully: ${_validWords.length} words.");
@@ -150,6 +171,39 @@ class _GameScreenState extends State<GameScreen> {
     // Burada hiçbir şey yapmana gerek yok!
     // Kullanıcı adı zaten widget.kullaniciAdi olarak hazır.
   }
+
+  Widget buildRewardButton({
+    required String label,
+    required String rewardKey,
+    required int count,
+    required VoidCallback onTap,
+  }) {
+    return ElevatedButton(
+      onPressed: count > 0 ? onTap : null, // sadece varsa aktif
+      style: ElevatedButton.styleFrom(
+        backgroundColor: count > 0 ? Colors.teal : Colors.grey,
+      ),
+      child: Row(
+        children: [
+          Text(label),
+          const SizedBox(width: 6),
+          if (count > 0)
+            Container(
+              padding: const EdgeInsets.all(6),
+              decoration: const BoxDecoration(
+                shape: BoxShape.circle,
+                color: Colors.white,
+              ),
+              child: Text(
+                '$count',
+                style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+
 
   @override
   Widget build(BuildContext context) {
@@ -338,7 +392,6 @@ class _GameScreenState extends State<GameScreen> {
                     displayContent = textChild ?? const SizedBox.shrink();
                   }
 
-
                   // Data type for DragTarget is now Map<String, dynamic>
                   return DragTarget<Map<String, dynamic>>(
                     builder: (context, candidateData, rejectedData) {
@@ -465,6 +518,38 @@ class _GameScreenState extends State<GameScreen> {
                   );
                 },
               ),
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.symmetric(vertical: 8),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+              children: [
+                buildRewardButton(
+                  label: 'Harf Yasağı',
+                  rewardKey: 'R_HARF_YASAGI',
+                  count: roomData['players'].firstWhere((p) => p['nickname'] == widget.kullaniciAdi)['rewardInventory']['R_HARF_YASAGI'] ?? 0,
+                  onTap: () {
+                    // socket.emit ile kullanımı tetikle
+                  },
+                ),
+                buildRewardButton(
+                  label: 'Bölge Yasağı',
+                  rewardKey: 'R_BOLGE_YASAGI',
+                  count: roomData['players'].firstWhere((p) => p['nickname'] == widget.kullaniciAdi)['rewardInventory']['R_BOLGE_YASAGI'] ?? 0,
+                  onTap: () {
+                    // socket.emit ile bölge yasağı gönder
+                  },
+                ),
+                buildRewardButton(
+                  label: 'Ekstra Hamle',
+                  rewardKey: 'R_EKSTRA_HAMLE',
+                  count: roomData['players'].firstWhere((p) => p['nickname'] == widget.kullaniciAdi)['rewardInventory']['R_EKSTRA_HAMLE'] ?? 0,
+                  onTap: () {
+                    // socket.emit ile ekstra hamleyi kullan
+                  },
+                ),
+              ],
             ),
           ),
           Container(
