@@ -82,6 +82,10 @@ function initializeSpecialTiles() {
   const rewardMap = Array(15).fill(null).map(() => Array(15).fill(null));
   const occupied = new Set();
 
+  rewardMap[7][7] = 'R_BOLGE_YASAGI';
+  rewardMap[7][6] = 'R_HARF_YASAGI';
+  rewardMap[7][8] = 'R_EKSTRA_HAMLE_JOKERI';
+
   // Mayınları yerleştir
   for (const [type, count] of Object.entries(mineCounts)) {
     const positions = generateRandomPositions(count, occupied);
@@ -129,6 +133,19 @@ io.on('connection', (socket) => {
   
         player.rack = drawLettersFromBag(room.letterBag, 7);
         waitingPlayer.player.rack = drawLettersFromBag(room.letterBag, 7);
+
+        if (!player.rewardInventory) player.rewardInventory = {};
+        if (!waitingPlayer.rewardInventory) waitingPlayer.player.rewardInventory = {};
+
+        player.rewardInventory['R_HARF_YASAGI'] = 0;
+        waitingPlayer.player.rewardInventory['R_HARF_YASAGI'] = 0;
+
+        player.rewardInventory['R_EKSTRA_HAMLE'] = 0;
+        waitingPlayer.player.rewardInventory['R_EKSTRA_HAMLE'] = 0;
+
+        player.rewardInventory['R_BOLGE_YASAGI'] = 0;
+        waitingPlayer.player.rewardInventory['R_BOLGE_YASAGI'] = 0;
+
   
         room.players.push(waitingPlayer.player);
         room.players.push(player);
@@ -322,8 +339,9 @@ io.on('connection', (socket) => {
             const rewardType = room.rewardMap[tile.row][tile.col];
             console.log(`🎁 ${tile.letter} harfi ödüle denk geldi! Türü: ${rewardType}`);
 
-            if (!player.rewardInventory) player.rewardInventory = {};
-            if (!player.rewardInventory[rewardType]) player.rewardInventory[rewardType] = 0;
+            if (!player.rewardInventory[rewardType]) {
+              player.rewardInventory[rewardType] = 0;
+            }
             player.rewardInventory[rewardType] += 1;
             console.log('PLAYER REWARD INVENTORY: ', player.rewardInventory);
           }

@@ -19,8 +19,7 @@ const playerSchema = new mongoose.Schema({
     default: [],
   },
   rewardInventory: {
-    type: Map,
-    of: Number,
+    type: Object,
     default: {},
   }
 });

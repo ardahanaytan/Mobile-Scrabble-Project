@@ -544,7 +544,7 @@ class _GameScreenState extends State<GameScreen> {
                 buildRewardButton(
                   label: 'Ekstra Hamle',
                   rewardKey: 'R_EKSTRA_HAMLE',
-                  count: roomData['players'].firstWhere((p) => p['nickname'] == widget.kullaniciAdi)['rewardInventory']['R_EKSTRA_HAMLE'] ?? 0,
+                  count: roomData['players'].firstWhere((p) => p['nickname'] == widget.kullaniciAdi)['rewardInventory']['R_EKSTRA_HAMLE_JOKERI'] ?? 0,
                   onTap: () {
                     // socket.emit ile ekstra hamleyi kullan
                   },
@@ -659,6 +659,7 @@ class _GameScreenState extends State<GameScreen> {
                   onPressed: (_isValidMove && _temporaryPlacedTiles.isNotEmpty)
                       ? () {
                           print("Hamleyi Onayla tıklandı!");
+                          print(roomData['players']);
                           print("Yerleştirilen Taşlar: $_temporaryPlacedTiles");
 
                           final socket = SocketClient.instance.socket!;
