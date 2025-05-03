@@ -140,8 +140,8 @@ io.on('connection', (socket) => {
         player.rewardInventory['R_HARF_YASAGI'] = 0;
         waitingPlayer.player.rewardInventory['R_HARF_YASAGI'] = 0;
 
-        player.rewardInventory['R_EKSTRA_HAMLE'] = 0;
-        waitingPlayer.player.rewardInventory['R_EKSTRA_HAMLE'] = 0;
+        player.rewardInventory['R_EKSTRA_HAMLE_JOKERI'] = 0;
+        waitingPlayer.player.rewardInventory['R_EKSTRA_HAMLE_JOKERI'] = 0;
 
         player.rewardInventory['R_BOLGE_YASAGI'] = 0;
         waitingPlayer.player.rewardInventory['R_BOLGE_YASAGI'] = 0;
@@ -254,6 +254,41 @@ io.on('connection', (socket) => {
            // TODO: Potentially revert temporary client state if needed
            return;
         }
+
+        var isLeft = false;
+        var isRight = false;
+
+        placedTiles.forEach(tile => {
+          if(tile.col >= 0 && tile.col <7 )
+          {
+            isLeft = true;
+          }
+          else if(tile.col >= 8 && tile.col <=15)
+          {
+            isRight = true;
+          }
+        });
+
+        // left - right control
+        console.log("isLR:",isLeft, isRight);
+        console.log(room.activeZoneRestrictions);
+        if(room.activeZoneRestrictions.get(nickname) === 'LEFT' && isLeft)
+        {
+          console.log("left!");
+          socket.emit('zoneRestrictionError', {
+            'message': 'Sola hamleniz engellendi!'
+          });
+          
+          return;
+        }
+        else if(room.activeZoneRestrictions.get(nickname) === 'RIGHT' && isRight)
+        {
+          console.log("right!");
+          socket.emit('zoneRestrictionError', {
+            'message': 'Sağa hamleniz engellendi!'
+          });
+          return;
+        }
         // --- End Validation ---
 
 
@@ -347,6 +382,10 @@ io.on('connection', (socket) => {
           }
         });
 
+        room.activeZoneRestrictions.delete(nickname);
+        room.markModified('activeZoneRestrictions');
+
+
         // Draw new letters
         const lettersToDraw = Math.min(lettersUsedCount, room.letterBag.length);
         const newLetters = drawLettersFromBag(room.letterBag, lettersToDraw);
@@ -359,7 +398,12 @@ io.on('connection', (socket) => {
         room.consecutivePasses = 0;
 
         // --- Advance Turn ---
-        room.turnIndex = (room.turnIndex + 1) % room.players.length;
+        if (player.extraMoveActive) {
+          player.extraMoveActive = false; // tek seferlik kullanıldı
+          console.log("🎯 Ekstra hamle hakkı kullanıldı, sıra değişmedi.");
+        } else {
+          room.turnIndex = (room.turnIndex + 1) % room.players.length;
+        }
         room.lastMoveTime = new Date();
         // --- End Advance Turn ---
 
@@ -466,14 +510,30 @@ io.on('connection', (socket) => {
 
     socket.on('useZoneBlock', async ({ roomId, nickname, restrictedSide }) => {
       try {
+        console.log("zoneblockdayiz");
+
         const room = await Room.findById(roomId);
         if (!room || room.isGameOver) return;
+
+        const num = room.players.find(p => p.nickname === nickname)['rewardInventory']['R_BOLGE_YASAGI']
+        console.log(num);
+        if(num <= 0)
+        {
+          return;
+        }
     
         const opponent = room.players.find(p => p.nickname !== nickname);
         if (!opponent) return;
     
         // Rakibin adıyla yasak bölgeyi işaretle
+        console.log(opponent.nickname, "için", restrictedSide);
         room.activeZoneRestrictions.set(opponent.nickname, restrictedSide); // 'LEFT' ya da 'RIGHT'
+
+        //buton azaltma
+        const player = room.players.find(p => p.nickname === nickname)
+        player.rewardInventory['R_BOLGE_YASAGI']-= 1;
+
+        room.markModified('players');
         await room.save();
     
         io.to(roomId).emit('updateRoom', {
@@ -485,6 +545,21 @@ io.on('connection', (socket) => {
       }
     });
     
+    socket.on('useReward', async ({ roomId, nickname, rewardKey }) => {
+      const room = await Room.findById(roomId);
+      const player = room.players.find(p => p.nickname === nickname);
+
+      if (rewardKey === 'R_EKSTRA_HAMLE_JOKERI' && player.rewardInventory['R_EKSTRA_HAMLE_JOKERI'] > 0) {
+        player.extraMoveActive = true;
+        player.rewardInventory['R_EKSTRA_HAMLE_JOKERI'] -= 1;
+        room.markModified('players');
+        await room.save();
+        io.to(roomId).emit('updateRoom', {
+          ...room.toObject(),
+          letterBagCount: room.letterBag.length,
+        });
+      }
+    });
 
     // Diğer eventler...
 });

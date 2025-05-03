@@ -177,9 +177,10 @@ class _GameScreenState extends State<GameScreen> {
     required String rewardKey,
     required int count,
     required VoidCallback onTap,
+    bool enabled = true,
   }) {
     return ElevatedButton(
-      onPressed: count > 0 ? onTap : null, // sadece varsa aktif
+      onPressed: (enabled && count > 0) ? onTap : null,
       style: ElevatedButton.styleFrom(
         backgroundColor: count > 0 ? Colors.teal : Colors.grey,
       ),
@@ -529,6 +530,7 @@ class _GameScreenState extends State<GameScreen> {
                   label: 'Harf Yasağı',
                   rewardKey: 'R_HARF_YASAGI',
                   count: roomData['players'].firstWhere((p) => p['nickname'] == widget.kullaniciAdi)['rewardInventory']['R_HARF_YASAGI'] ?? 0,
+                  enabled: isMyTurn,
                   onTap: () {
                     // socket.emit ile kullanımı tetikle
                   },
@@ -537,16 +539,50 @@ class _GameScreenState extends State<GameScreen> {
                   label: 'Bölge Yasağı',
                   rewardKey: 'R_BOLGE_YASAGI',
                   count: roomData['players'].firstWhere((p) => p['nickname'] == widget.kullaniciAdi)['rewardInventory']['R_BOLGE_YASAGI'] ?? 0,
-                  onTap: () {
-                    // socket.emit ile bölge yasağı gönder
+                  enabled: isMyTurn,
+                  onTap: () async {
+                    final selectedSide = await showDialog<String>(
+                      context: context,
+                      builder: (BuildContext context) {
+                        return AlertDialog(
+                          title: Text('Taraf Seçin'),
+                          content: Text('Hangi tarafı kısıtlamak istiyorsunuz?'),
+                          actions: [
+                            TextButton(
+                              onPressed: () => Navigator.of(context).pop('LEFT'),
+                              child: Text('Sol'),
+                            ),
+                            TextButton(
+                              onPressed: () => Navigator.of(context).pop('RIGHT'),
+                              child: Text('Sağ'),
+                            ),
+                          ],
+                        );
+                      },
+                    );
+
+                    if (selectedSide != null) {
+                      final socket = SocketClient.instance.socket!;
+                      socket.emit('useZoneBlock', {
+                        'roomId': roomData['_id'],
+                        'nickname': widget.kullaniciAdi,
+                        'restrictedSide': selectedSide,
+                      });
+                    }
                   },
                 ),
                 buildRewardButton(
                   label: 'Ekstra Hamle',
-                  rewardKey: 'R_EKSTRA_HAMLE',
+                  rewardKey: 'R_EKSTRA_HAMLE_JOKERI',
                   count: roomData['players'].firstWhere((p) => p['nickname'] == widget.kullaniciAdi)['rewardInventory']['R_EKSTRA_HAMLE_JOKERI'] ?? 0,
+                  enabled: isMyTurn,
                   onTap: () {
-                    // socket.emit ile ekstra hamleyi kullan
+                    final socket = SocketClient.instance.socket!;
+                    socket.emit('useReward', {
+                      'roomId': roomData['_id'],
+                      'nickname': widget.kullaniciAdi,
+                      'rewardKey': 'R_EKSTRA_HAMLE_JOKERI',
+                    });
                   },
                 ),
               ],

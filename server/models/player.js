@@ -21,6 +21,10 @@ const playerSchema = new mongoose.Schema({
   rewardInventory: {
     type: Object,
     default: {},
+  },
+  extraMoveActive: {
+    type: Boolean,
+    default: false
   }
 });
 
