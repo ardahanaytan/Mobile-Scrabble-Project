@@ -53,50 +53,48 @@ class GameOverScreen extends StatelessWidget {
       appBar: AppBar(title: const Text("Oyun Bitti")),
       body: Padding(
         padding: const EdgeInsets.all(16.0),
-        child: Column(
-          children: [
-            Text(
-              "Kazanan: $kazanan 🎉",
-              style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 20),
-            const Text("Skor Tablosu:", style: TextStyle(fontSize: 18)),
-            const SizedBox(height: 10),
-            ...oyuncular.map((oyuncu) => ListTile(
-              title: Text(oyuncu['nickname']),
-              trailing: Text("Puan: ${oyuncu['points']}"),
-            )),
-            const SizedBox(height: 20),
-            Text("Kalan Taş Sayısı: $kalanTasSayisi", style: const TextStyle(fontSize: 16)),
-
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const SizedBox(height: 16),
-                const Text(
-                  'Oyun Olayları',
-                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                ),
-                const SizedBox(height: 8),
-                ...eventLogs.map<Widget>((log) {
-                  final zaman = log[0].toString();
-                  final mesaj = log[1].toString();
-                  return Padding(
-                    padding: const EdgeInsets.symmetric(vertical: 2.0),
-                    child: Text("🔔 $mesaj"),
-                  );
-                }).toList(),
-              ],
-            ),
-
-          const SizedBox(height: 10),
-          Center(
-            child: ElevatedButton(
-              onPressed: () => _goToUserHomeScreen(context),
-              child: const Text("Anasayfaya Dön"),
+        child: SingleChildScrollView( // <<< BURAYA EKLEDİK
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                "Kazanan: $kazanan 🎉",
+                style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
               ),
-            ),
-          ],
+              const SizedBox(height: 20),
+              const Text("Skor Tablosu:", style: TextStyle(fontSize: 18)),
+              const SizedBox(height: 10),
+              ...oyuncular.map((oyuncu) => ListTile(
+                    title: Text(oyuncu['nickname']),
+                    trailing: Text("Puan: ${oyuncu['points']}"),
+                  )),
+              const SizedBox(height: 20),
+              Text("Kalan Taş Sayısı: $kalanTasSayisi", style: const TextStyle(fontSize: 16)),
+
+              const SizedBox(height: 16),
+              const Text(
+                'Oyun Olayları',
+                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+              ),
+              const SizedBox(height: 8),
+              ...eventLogs.map<Widget>((log) {
+                final zaman = log[0].toString();
+                final mesaj = log[1].toString();
+                return Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 2.0),
+                  child: Text("🔔 $mesaj"),
+                );
+              }).toList(),
+
+              const SizedBox(height: 20),
+              Center(
+                child: ElevatedButton(
+                  onPressed: () => _goToUserHomeScreen(context),
+                  child: const Text("Anasayfaya Dön"),
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );
