@@ -78,6 +78,10 @@ const roomSchema = new mongoose.Schema({
     of: String, // Örnek: 'LEFT' ya da 'RIGHT'
     default: {} // örn: { "deniyorum2": "LEFT" }
   },
+  eventLogs: {
+    type: [[String]],
+    default: () => [],
+  }
 
 }, { timestamps: true });
 

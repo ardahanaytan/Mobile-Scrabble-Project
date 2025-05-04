@@ -8,12 +8,16 @@ class GameOverScreen extends StatelessWidget {
   final String kazanan;
   final List<Map<String, dynamic>> oyuncular;
   final String kullaniciAdi;
+  final List<dynamic> eventLogs;
+  final int kalanTasSayisi;
 
   const GameOverScreen({
     Key? key,
     required this.kazanan,
     required this.oyuncular,
     required this.kullaniciAdi,
+    required this.eventLogs,
+    required this.kalanTasSayisi,
   }) : super(key: key);
 
   Future<void> _goToUserHomeScreen(BuildContext context) async {
@@ -62,10 +66,35 @@ class GameOverScreen extends StatelessWidget {
               title: Text(oyuncu['nickname']),
               trailing: Text("Puan: ${oyuncu['points']}"),
             )),
-            const Spacer(),
-            ElevatedButton(
+            const SizedBox(height: 20),
+            Text("Kalan Taş Sayısı: $kalanTasSayisi", style: const TextStyle(fontSize: 16)),
+
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const SizedBox(height: 16),
+                const Text(
+                  'Oyun Olayları',
+                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                ),
+                const SizedBox(height: 8),
+                ...eventLogs.map<Widget>((log) {
+                  final zaman = log[0].toString();
+                  final mesaj = log[1].toString();
+                  return Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 2.0),
+                    child: Text("🔔 $mesaj"),
+                  );
+                }).toList(),
+              ],
+            ),
+
+          const SizedBox(height: 10),
+          Center(
+            child: ElevatedButton(
               onPressed: () => _goToUserHomeScreen(context),
               child: const Text("Anasayfaya Dön"),
+              ),
             ),
           ],
         ),

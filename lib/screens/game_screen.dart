@@ -259,6 +259,8 @@ class _GameScreenState extends State<GameScreen> {
               kazanan: kazanan,
               oyuncular: List<Map<String, dynamic>>.from(roomData['players']),
               kullaniciAdi: widget.kullaniciAdi,
+              eventLogs: roomData['eventLogs'],
+              kalanTasSayisi: roomData['letterBag'].length
             ),
           ),
         );

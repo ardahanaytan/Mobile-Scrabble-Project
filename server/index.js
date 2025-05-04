@@ -326,6 +326,7 @@ io.on('connection', (socket) => {
 
         // --- Update Player Rack & Points (Placeholders) ---
         const player = room.players[playerIndex];
+
         let pointsEarned = score; // TODO: Calculate actual points
         let lettersUsedCount = 0;
 
@@ -349,34 +350,43 @@ io.on('connection', (socket) => {
           }
         });
 
+        
         // 🔍 Yeni yerleştirilen taşlara bak: Ödül veya Ceza var mı?
         placedTiles.forEach(tile => {
+          var logText = '';
           if (room.mineMap && room.mineMap[tile.row][tile.col]) {
             console.log(`💣 ${tile.letter} harfi mayına denk geldi! Türü: ${room.mineMap[tile.row][tile.col]}`);
+
+            logText = `${player.nickname} kullanıcısının ${tile.letter} harfi mayına denk geldi! Türü: ${room.mineMap[tile.row][tile.col]}.`
+
             switch (room.mineMap[tile.row][tile.col]) {
               case 'M_PUAN_BOLUNMESI':
                 pointsEarned = Math.floor(pointsEarned * 0.3);
+                logText += ' Etkisi: Puan %30\'a düştü';
                 break;
               case 'M_PUAN_TRANSFERI':
                 const opponent = room.players.find(p => p.nickname !== nickname);
                 if (opponent) {
                   opponent.points += pointsEarned;
                   pointsEarned = 0; 
+                  logText += ' Etkisi: Hamle puanı rakibe geçti!';
                 }
                 break;
               case 'M_HARF_KAYBI':
                 const lostLetters = [...player.rack]; // elindeki tüm harfleri kaybeder
                 room.letterBag.push(...lostLetters);
-
+                logText += ' Etkisi: Elindeki tüm harfler gitti!';
                 player.rack = [];
 
                 lettersUsedCount = 7;
                 break;
               case 'M_EKSTRA_HAMLE_ENGELI':
                 pointsEarned = normalScore;
+                logText += ' Etkisi: Çarpımlardan gelen puanlar etki etmeyecek!';
                 break;
               case 'M_KELIME_IPTALI':
                 pointsEarned = 0;
+                logText += ' Etkisi: Hamleden puan gelmeyecek!';
                 break;
             }
           }
@@ -385,17 +395,25 @@ io.on('connection', (socket) => {
             const rewardType = room.rewardMap[tile.row][tile.col];
             console.log(`🎁 ${tile.letter} harfi ödüle denk geldi! Türü: ${rewardType}`);
 
+          logText = `${player.nickname} kullanıcısının ${tile.letter} harfi ödüle denk geldi! Türü: ${rewardType}.`
+
             if (!player.rewardInventory[rewardType]) {
               player.rewardInventory[rewardType] = 0;
             }
             player.rewardInventory[rewardType] += 1;
             console.log('PLAYER REWARD INVENTORY: ', player.rewardInventory);
           }
+
+          if (logText !== '') {
+            const timestamp = new Date().toISOString();
+            room.eventLogs.push([timestamp, logText]);
+          }
         });
 
         room.activeZoneRestrictions.delete(nickname);
         player.frozenIndexes = [];
         room.markModified('activeZoneRestrictions');
+        room.markModified('eventLogs');
 
 
         // Draw new letters
@@ -423,6 +441,7 @@ io.on('connection', (socket) => {
         
         if(player.rack.length == 0)
           {
+            const opponent = room.players.find(p => p.nickname !== player.nickname);
             var playerPoint = player.points;
             var opponentPoint = opponent.points;
 
