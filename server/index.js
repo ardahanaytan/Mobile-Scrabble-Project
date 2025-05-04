@@ -383,6 +383,7 @@ io.on('connection', (socket) => {
         });
 
         room.activeZoneRestrictions.delete(nickname);
+        player.frozenIndexes = [];
         room.markModified('activeZoneRestrictions');
 
 
@@ -560,6 +561,49 @@ io.on('connection', (socket) => {
         });
       }
     });
+
+    socket.on('freeze_letter', async ({ roomId, nickname}) => {
+      
+      const room = await Room.findById(roomId);
+      if (!room || room.isGameOver) return;
+
+      //rakip racks sayisi
+      const opponent = room.players.find(p => p.nickname !== nickname);
+      if (!opponent) return;
+      console.log("freeze letter for ", opponent.nickname);
+      const op_rack_num = opponent.rack.length;
+
+      let frozen = [];
+
+      if (op_rack_num >= 2) {
+        while (frozen.length < 2) {
+          const rnd = Math.floor(Math.random() * op_rack_num);
+          if (!frozen.includes(rnd)) {
+            frozen.push(rnd);
+          }
+        }
+      } else if (op_rack_num === 1) {
+        frozen.push(0); 
+      } else {
+        frozen = [];
+      }
+      //save on db
+      console.log("frozen:", frozen);
+      opponent.frozenIndexes = frozen;
+
+      const player = room.players.find(p => p.nickname === nickname);
+      if(!player) return;
+
+      player.rewardInventory['R_HARF_YASAGI'] -= 1;
+      room.markModified('players');
+      await room.save();
+      io.to(roomId).emit('updateRoom', {
+        ...room.toObject(),
+        letterBagCount: room.letterBag.length,
+      });
+
+    });
+
 
     // Diğer eventler...
 });

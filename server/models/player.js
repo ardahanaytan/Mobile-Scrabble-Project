@@ -25,7 +25,11 @@ const playerSchema = new mongoose.Schema({
   extraMoveActive: {
     type: Boolean,
     default: false
-  }
+  },
+  frozenIndexes: {
+    type: [Number],
+    default: []
+  },
 });
 
 module.exports = playerSchema;

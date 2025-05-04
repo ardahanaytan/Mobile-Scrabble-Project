@@ -58,6 +58,7 @@ class _GameScreenState extends State<GameScreen> {
   int _potentialScore = 0; // Score for the current temporary placement
   int _normalScore = 0; // Score for the current normal placement
   bool _isValidMove = false;
+  List<int> frozenIndexes = [];
   Set<(int, int)> _jokerTileCoords = {};
   bool isTurkishLetter(String value) {
     final turkishRegex = RegExp(r'^[a-zA-ZçğıöşüÇĞİÖŞÜ]$');
@@ -109,6 +110,7 @@ class _GameScreenState extends State<GameScreen> {
         );
       }
     });
+
   }
 
   final Map<String, int> letterPoints = {
@@ -533,6 +535,11 @@ class _GameScreenState extends State<GameScreen> {
                   enabled: isMyTurn,
                   onTap: () {
                     // socket.emit ile kullanımı tetikle
+                    final socket = SocketClient.instance.socket!;
+                      socket.emit('freeze_letter', {
+                        'roomId': roomData['_id'],
+                        'nickname': widget.kullaniciAdi,
+                      });
                   },
                 ),
                 buildRewardButton(
@@ -599,20 +606,55 @@ class _GameScreenState extends State<GameScreen> {
                 (index) {
                   final letter = myPlayer['rack'][index];
                   final bool isPlaced = _usedRackIndices.contains(index);
+                  final List<dynamic> frozenIndexes = myPlayer['frozenIndexes'] ?? [];
+                  final bool isFrozen = frozenIndexes.contains(index);
 
                   // If the tile at this index is already placed on the board, show a placeholder
-                  if (isPlaced) {
+                  if (isFrozen) {
                     return Container(
                       width: 40,
                       height: 40,
                       margin: const EdgeInsets.symmetric(horizontal: 4),
                       decoration: BoxDecoration(
-                        color: Colors.grey.shade300, // Placeholder color
+                        color: Colors.blueGrey.shade300,
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(color: Colors.black54, width: 1),
+                      ),
+                      child: Stack(
+                        children: [
+                          Center(
+                            child: Text(
+                              letter,
+                              style: const TextStyle(
+                                fontSize: 20,
+                                fontWeight: FontWeight.bold,
+                                color: Colors.white70,
+                                decoration: TextDecoration.lineThrough,
+                              ),
+                            ),
+                          ),
+                          Align(
+                            alignment: const Alignment(0.9, -1),
+                            child: Text(
+                              _getLetterPoint(letter).toString(),
+                              style: const TextStyle(fontSize: 8, fontWeight: FontWeight.bold, color: Colors.white60),
+                            ),
+                          ),
+                        ],
+                      ),
+                    );
+                  } else if (isPlaced) {
+                    // Yerleştirilmiş harf (boş görünüm)
+                    return Container(
+                      width: 40,
+                      height: 40,
+                      margin: const EdgeInsets.symmetric(horizontal: 4),
+                      decoration: BoxDecoration(
+                        color: Colors.grey.shade300,
                         borderRadius: BorderRadius.circular(8),
                       ),
                     );
                   }
-
                   // Otherwise, show the draggable tile
                   // Data is now a Map
                   return Draggable<Map<String, dynamic>>(

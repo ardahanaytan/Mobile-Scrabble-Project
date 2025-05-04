@@ -12,8 +12,9 @@ elinde harf kalan oyuncudan ceza puanı olarak düşülür.  !!!!!!!EN SON BAKIL
 
 CUMARTESİ 
 
---ödüller
+--ödüller ok kontrol lazim
 --oyun oluşturulduktan sonra lobinin imhası
+--geri çıkma olayı?
 
 ?? taşıma olayı 
 Sıra kendinde olan kullanıcı kelime yazmak yerine oyun tahtasında yer alan harflerden
