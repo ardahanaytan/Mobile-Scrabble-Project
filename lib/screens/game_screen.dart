@@ -1,9 +1,14 @@
+import 'dart:convert';
+
 import 'package:flutter/foundation.dart' show listEquals; // Import for listEquals
 import 'package:flutter/material.dart';
 import 'package:flutter_application_1/provider/room_data_provide.dart';
 import 'package:flutter/services.dart' show rootBundle; // Import for loading assets
 import 'package:flutter_application_1/resources/socket_client.dart';
 import 'package:flutter_application_1/screens/game_over_screen.dart';
+import 'package:flutter_application_1/screens/user_home_screen.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:http/http.dart' as http;
 import 'package:provider/provider.dart';
 import 'package:string_validator/string_validator.dart';
 
@@ -174,6 +179,34 @@ class _GameScreenState extends State<GameScreen> {
     // Kullanıcı adı zaten widget.kullaniciAdi olarak hazır.
   }
 
+  Future<void> _goToUserHomeScreen() async {
+    final ip = dotenv.env['IP_ADDRESS'] ?? 'localhost';
+
+    final response = await http.post(
+      Uri.parse('http://${ip}:3010/api/get-stats'),
+      headers: {'Content-Type': 'application/json'},
+      body: jsonEncode({
+        'nickname': widget.kullaniciAdi,
+      }),
+    );
+
+    if (response.statusCode == 200) {
+      final data = jsonDecode(response.body);
+      Navigator.pushReplacementNamed(
+        context,
+        UserHomeScreen.routeName,
+        arguments: {
+          'kullaniciAdi': data['kullaniciAdi'],
+          'kazanilanOyun': data['kazanilanOyun'],
+          'toplamOyun': data['toplamOyun'],
+        },
+      );
+    } else {
+      // hata durumu
+      print('Kullanıcı bilgileri alınamadı');
+    }
+  }
+
   Widget buildRewardButton({
     required String label,
     required String rewardKey,
@@ -214,15 +247,18 @@ class _GameScreenState extends State<GameScreen> {
     final kalanTas = roomData['letterBag'].length ?? 0;
 
     if (roomData['isGameOver'] == true) {
+      print('Oyun bitti.');
       final kazanan = roomData['players']
           .reduce((a, b) => a['points'] > b['points'] ? a : b)['nickname'];
 
       Future.microtask(() {
+        print("Game Over: $kazanan");
         Navigator.of(context).pushReplacement(
           MaterialPageRoute(
             builder: (context) => GameOverScreen(
               kazanan: kazanan,
               oyuncular: List<Map<String, dynamic>>.from(roomData['players']),
+              kullaniciAdi: widget.kullaniciAdi,
             ),
           ),
         );
@@ -270,6 +306,10 @@ class _GameScreenState extends State<GameScreen> {
       appBar: AppBar(
         title: const Text('Scrabble Oyun Ekranı'),
         centerTitle: true,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back),
+          onPressed: _goToUserHomeScreen,
+        ),
       ),
       body: Column(
         children: [
@@ -296,14 +336,19 @@ class _GameScreenState extends State<GameScreen> {
               }).toList(),
             ),
           ),
-          Text(
-            'Kalan Taş: $kalanTas',
-            style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-          ),
-          const SizedBox(height: 10),
-          Text(
-            'Kalan Süre: ${formatSeconds(remainingSeconds)}',
-            style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center, 
+            children: [
+              Text(
+                'Kalan Taş: $kalanTas',
+                style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+              ),
+              const SizedBox(width: 32),
+              Text(
+                'Kalan Süre: ${formatSeconds(remainingSeconds)}',
+                style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+              ),
+            ],
           ),
           const SizedBox(height: 10),
           Expanded(
@@ -524,7 +569,7 @@ class _GameScreenState extends State<GameScreen> {
             ),
           ),
           Padding(
-            padding: const EdgeInsets.symmetric(vertical: 8),
+            padding: const EdgeInsets.symmetric(vertical: 5),
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceEvenly,
               children: [

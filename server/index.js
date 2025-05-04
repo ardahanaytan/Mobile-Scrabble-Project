@@ -82,10 +82,6 @@ function initializeSpecialTiles() {
   const rewardMap = Array(15).fill(null).map(() => Array(15).fill(null));
   const occupied = new Set();
 
-  rewardMap[7][7] = 'R_BOLGE_YASAGI';
-  rewardMap[7][6] = 'R_HARF_YASAGI';
-  rewardMap[7][8] = 'R_EKSTRA_HAMLE_JOKERI';
-
   // Mayınları yerleştir
   for (const [type, count] of Object.entries(mineCounts)) {
     const positions = generateRandomPositions(count, occupied);
@@ -105,6 +101,19 @@ function initializeSpecialTiles() {
   return { mineMap, rewardMap };
 }
 
+const letterPoints = {
+  'A': 1, 'B': 3, 'C': 4, 'Ç': 4, 'D': 3, 'E': 1, 'F': 7,
+  'G': 5, 'Ğ': 8, 'H': 5, 'I': 2, 'İ': 1, 'J': 10, 'K': 1,
+  'L': 1, 'M': 2, 'N': 1, 'O': 2, 'Ö': 7, 'P': 5, 'R': 1,
+  'S': 2, 'Ş': 4, 'T': 1, 'U': 2, 'Ü': 3, 'V': 7, 'Y': 3, 'Z': 4
+};
+
+function calculateRackPenalty(rack) {
+  return rack.reduce((total, letter) => {
+    const point = letterPoints[letter.toUpperCase()] || 0;
+    return total + point;
+  }, 0);
+}
 
 io.on('connection', (socket) => {
     console.log('✅ Yeni bağlantı:', socket.id);
@@ -168,6 +177,8 @@ io.on('connection', (socket) => {
         io.to(roomId).emit('matchFound', { room });
   
         waitingPlayer = null;
+
+        updateTurnTimer(room);
       } catch (err) {
         console.error('❌ Eşleşme hatası:', err);
       }
@@ -393,7 +404,7 @@ io.on('connection', (socket) => {
         player.rack.push(...newLetters);
         player.points += pointsEarned; // Add calculated points
         // Mark players array as modified
-        room.markModified('players');
+        
         // --- End Update Player Rack & Points ---
 
         room.consecutivePasses = 0;
@@ -409,10 +420,39 @@ io.on('connection', (socket) => {
         // --- End Advance Turn ---
 
         // --- Check Game Over (Basic) ---
-        // TODO: Implement proper game over conditions (e.g., bag empty + player rack empty, consecutive passes)
+        
+        if(player.rack.length == 0)
+          {
+            var playerPoint = player.points;
+            var opponentPoint = opponent.points;
+
+            //rakibe ceza olayi
+            var eldekiPuanlar = 0;
+            var opponentRacks = opponent.rack;
+            const penalty = calculateRackPenalty(opponentRacks);
+            opponent.points -= penalty;
+            opponentPoint -= penalty;
+
+            //oyunu bitirme
+            room.isGameOver = true;
+            if(playerPoint > opponentPoint)
+            {
+              room.winner = player.nickname;
+            }
+            else if(playerPoint < opponentPoint)
+            {
+              room.winner = opponent.nickname;
+            }
+            else
+            {
+              room.winner = room.players[0].nickname;
+            }
+        }
+  
+
         // --- End Check Game Over ---
 
-
+        room.markModified('players');
         await room.save();
 
         // Broadcast updated room state to all players in the room
@@ -618,19 +658,20 @@ function updateTurnTimer(room) {
 
   const timeout = setTimeout(async () => {
     try {
-      const updatedRoom = await Room.findById(roomId);
-      if (!updatedRoom || updatedRoom.isGameOver) return;
+      const room = await Room.findById(roomId);
+      if (!room || room.isGameOver) return;
 
-      const loser = updatedRoom.players[updatedRoom.turnIndex];
-      const winner = updatedRoom.players.find(p => p.nickname !== loser.nickname);
+      const loser = room.players[room.turnIndex];
+      const winner = room.players.find(p => p.nickname !== loser.nickname);
 
-      updatedRoom.isGameOver = true;
-      updatedRoom.winner = winner?.nickname || null;
+      room.isGameOver = true;
+      room.winner = winner?.nickname || null;
 
       console.log(`⏱ Oyuncu süresini doldurdu ve kaybetti: ${loser.nickname}`);
-      console.log(`🏆 Kazanan: ${updatedRoom.winner}`);
+      console.log(`🏆 Kazanan: ${room.winner}`);
 
-      await updatedRoom.save();
+      room.markModified('winner', 'isGameOver');
+      await room.save();
       io.to(roomId).emit('updateRoom', {
         ...room.toObject(),
         letterBagCount: room.letterBag.length,
@@ -748,7 +789,41 @@ app.post('/api/login', async (req, res) => {
 });
   
 
+app.post('/api/get-stats', async (req, res) => {
 
+  const { nickname } = req.body;
+  console.log("nickname: ", nickname);
+  if (!nickname) {
+    return res.status(400).json({ message: 'nickname gerekli' });
+  }
+  try {
+    const Room = require('./models/room');
+  
+    // Toplam oyun sayısı (bitmiş oyunlar ve kullanıcı oynamış)
+    const allGames = await Room.find({
+      isGameOver: true,
+      players: { $elemMatch: { nickname: nickname } }
+    });
+    
+
+    const totalGames = allGames.length;
+
+    // Kazanılan oyun sayısı
+    const winCount = allGames.filter(room => room.winner === nickname).length;
+    console.log("totalGames: ", totalGames);
+    console.log("winCount: ", winCount);
+
+    return res.status(200).json({
+      kullaniciAdi: nickname,
+      kazanilanOyun: winCount,
+      toplamOyun: totalGames,
+    });
+  }
+  catch (err) {
+    console.error("❌ Kullanıcı istatistik hatası:", err);
+    res.status(500).json({ message: 'İstatistik alınamadı.' });
+  }
+});
 
 
 app.get('/api/active-rooms', async (req, res) => {

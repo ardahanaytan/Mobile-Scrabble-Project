@@ -3,6 +3,7 @@ import 'package:flutter_application_1/provider/room_data_provide.dart';
 import 'package:flutter_application_1/screens/lobi_screen.dart';
 import 'package:flutter_application_1/screens/register_screen.dart';
 import 'package:flutter_application_1/screens/login_screen.dart';
+import 'package:flutter_application_1/screens/user_home_screen.dart';
 import 'package:flutter_application_1/utils/colors.dart';
 import 'package:flutter_application_1/screens/main_menu_screen.dart';
 import 'package:flutter_application_1/screens/game_screen.dart';
@@ -36,7 +37,7 @@ class MyApp extends StatelessWidget {
         routes: {
           MainMenuScreen.routeName: (context) => const MainMenuScreen(),
           LoginScreen.routeName: (context) => const LoginScreen(),
-          RegisterScreen.routeName: (context) => const RegisterScreen(),
+          RegisterScreen.routeName: (context) => const RegisterScreen(), // default değer
         },
         onGenerateRoute: (settings) {
           if (settings.name == LobbyScreen.routeName) {
@@ -50,6 +51,17 @@ class MyApp extends StatelessWidget {
             final args = settings.arguments as Map<String, dynamic>;
             return MaterialPageRoute(
               builder: (context) => GameScreen(kullaniciAdi: args['kullaniciAdi']),
+            );
+          }
+
+          if (settings.name == UserHomeScreen.routeName) {
+            final args = settings.arguments as Map<String, dynamic>;
+            return MaterialPageRoute(
+              builder: (context) => UserHomeScreen(
+                kullaniciAdi: args['kullaniciAdi'],
+                kazanilanOyun: args['kazanilanOyun'],
+                toplamOyun: args['toplamOyun'],
+              ),
             );
           }
 

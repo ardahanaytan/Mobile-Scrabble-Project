@@ -5,6 +5,7 @@ import 'package:flutter_application_1/screens/aktif_oyunlar_screen.dart';
 import 'package:flutter_application_1/screens/biten_oyunlar_screen.dart';
 
 class UserHomeScreen extends StatelessWidget {
+  static const String routeName = "/user_home_screen";
   final String kullaniciAdi;
   final int kazanilanOyun;
   final int toplamOyun;
